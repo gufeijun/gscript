@@ -3,6 +3,7 @@ package lexer
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -245,11 +246,11 @@ func (l *Lexer) scanIdentifier() {
 	l.forward(k - l.cursor - 1)
 }
 
-// dec: 1234, hex: 0xFF, oct: 017
+// dec: 1234, hex: 0xFF, oct: 017, float: 0.123
 func (l *Lexer) scanNumber(signed int64) {
 	var num, base int64
 	var skip int
-	contentLength := 1
+	var value interface{}
 
 	if signed != 0 { // curCh == '+' or '-'
 		skip = 1
@@ -257,36 +258,57 @@ func (l *Lexer) scanNumber(signed int64) {
 		signed = 1
 	}
 
-	firstDigit := l.src[l.cursor+skip]
+	k := l.cursor + skip
+	firstDigit := l.src[k]
 	if firstDigit != '0' { // dec
 		base = 10
 	} else {
 		nextCh := l.lookAhead(skip + 1)
+		if nextCh == '.' { // float
+			k, value = l.scanFloat(k + 2)
+			goto end
+		}
 		if isDigit(nextCh) { // oct
 			base = 8
-			skip += 1
+			k += 1
 		} else if nextCh == 'x' { // hex
 			if gapCh := l.lookAhead(skip + 2); gapCh == CHAR_EOF || !isHexDigit(gapCh) {
 				l.error("invalid hex number near %c", firstDigit)
 			}
 			base = 16
-			skip += 2
+			k += 2
 		} else { // 0
 			base = 10
 		}
 	}
 
-	var k int
-	for k = skip + l.cursor; k < len(l.src) &&
-		(base == 8 && l.src[k] < '8' && l.src[k] >= '0' ||
+	for ; k < len(l.src) &&
+		(l.src[k] == '.' ||
+			base == 8 && l.src[k] < '8' && l.src[k] >= '0' ||
 			base == 10 && isDigit(l.src[k]) ||
 			base == 16 && isHexDigit(l.src[k])); k++ {
+		if l.src[k] == '.' {
+			k, value = l.scanFloat(k + 1)
+			goto end
+		}
 		num = num*base + toNumber(l.src[k])
 	}
-	contentLength = k - l.cursor
+	value = num * signed
+end:
+	contentLength := k - l.cursor
 	l.genToken(TOKEN_NUMBER, contentLength)
-	l.curToken.Value = num * signed
+	l.curToken.Value = value
 	l.forward(contentLength - 1)
+}
+
+func (l *Lexer) scanFloat(start int) (end int, value float64) {
+	for end = start; end < len(l.src) && isDigit(l.src[end]); end++ {
+	}
+	value, err := strconv.ParseFloat(string(l.src[l.cursor:end]), 64)
+	if err != nil {
+		l.error(err.Error())
+	}
+	return end, value
 }
 
 func (l *Lexer) scanStringLiteral() {

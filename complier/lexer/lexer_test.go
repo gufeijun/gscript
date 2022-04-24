@@ -143,11 +143,11 @@ func match(tokens []*Token, l *Lexer, t *testing.T) {
 		got := l.NextToken()
 		gotV, wantV := tokenValue(got), tokenValue(want)
 		if gotV != wantV {
-			t.Errorf("source code:\n %s\n", l.src)
+			// t.Errorf("source code:\n %s\n", l.src)
 			t.Fatalf("want token %s, but got %s\n", wantV, gotV)
 		}
 		if got.Content != want.Content {
-			t.Errorf("source code:\n %s\n", l.src)
+			// t.Errorf("source code:\n %s\n", l.src)
 			t.Fatalf("want content %s, but got %s\n", want.Content, got.Content)
 		}
 	}
@@ -166,7 +166,7 @@ func tokenValue(token *Token) string {
 	} else if token.Kind == TOKEN_IDENTIFIER {
 		tokenVal = fmt.Sprintf("<identifier,%s>", token.Value)
 	} else if token.Kind == TOKEN_NUMBER {
-		tokenVal = fmt.Sprintf("<number,%d>", token.Value)
+		tokenVal = fmt.Sprintf("<number,%v>", token.Value)
 	} else if token.Kind == TOKEN_STRING {
 		tokenVal = fmt.Sprintf("<string,%s>", token.Value)
 	} else {
@@ -223,7 +223,7 @@ var OP_SEP_TOKEN_MAP = map[int]string{
 	TOKEN_OP_SHR:     ">>",
 }
 
-var NUMBER_TOKEN_MAP = map[string]int{
+var NUMBER_TOKEN_MAP = map[string]interface{}{
 	"0x1111":    0x1111,
 	"0":         0,
 	"+0":        0,
@@ -243,6 +243,18 @@ var NUMBER_TOKEN_MAP = map[string]int{
 	"+868":      868,
 	"+0xabcdef": 0xabcdef,
 	"+0765":     0765,
+	"0.786":     0.786,
+	"+0.786":    0.786,
+	"-0.786":    -0.786,
+	"10.212":    10.212,
+	"+10.212":   10.212,
+	"-10.212":   -10.212,
+	"1.212":     1.212,
+	"+1.212":    1.212,
+	"-1.212":    -1.212,
+	"-19.212":   -19.212,
+	"19.212":    19.212,
+	"+19.212":   19.212,
 }
 
 var STRING_TOKEN_MAP = map[string]string{
