@@ -95,6 +95,9 @@ func parseBlock(l *Lexer) (block ast.Block) {
 }
 
 func parseExport(l *Lexer) (ept ast.Export) {
+	if !l.ConsumeIf(TOKEN_KW_EXPORT) {
+		return
+	}
 	ept.Exp = parseExp(l)
 	l.ConsumeIf(TOKEN_SEP_SEMI)
 	return
