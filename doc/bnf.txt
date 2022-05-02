@@ -1,0 +1,93 @@
+program ::= {importBlock} {blockStmt}  [exportBlock]
+
+blockStmt ::= block ';'
+            | stmt
+
+block ::= '{' {blockStmt} '}'
+
+importBlock ::= import <STRING|ID> {',' <STRING|ID>} [as ID {',' ID}] ';'
+
+exportBlock ::= export exp ';'
+
+stmt ::= | varDeclare ';'                                       // declare variables
+         | varAssign ';'                                        // variables assignment
+         | varIncOrDec ';'
+         | var '(' {explist} ')' callTail ';'                   // named function call
+         | ID ':'                                               // label
+         | func ID funcBody ';'                                 // function definition
+         | funcLiteral '(' [expList] ')' callTail ';'           // anonymous function call
+         | break ';'
+         | continue ';'
+         | return [expList] ';'
+         | goto ID ';'
+         | fallthrough ';'
+         | loop '(' let ID [',' ID] ':' exp ')' blockStmt             // iterator loop
+         | while expBlock blockStmt                                   // while statement
+         | for '(' <varAssign|varDeclare> ';' exp ';' forTail ')' blockStmt  // for statement
+         | if expBlock blockStmt {elif expBlock blockStmt} [else blockStmt]
+         | class ID '{' {classBody} '}' ';'
+         | enum '{' [enumBlocks] '}' ';'
+         | switch expBlock [';'] '{' caseBlocks '}'
+         | incOrDecVar ';'
+
+varDeclare ::= <const|let> nameList [<'='|':='> expList]
+varAssign ::= var {',' var} assignOP expList
+varIncOrDec ::= var <'++'|'--'>
+incOrDecVar ::= <'++'|'--'> var
+forTail ::= varAssign | varIncOrDec | incOrDecVar
+
+callTail ::= { {attrTail} '(' {explist} ')' }
+
+attrTail ::= '.' ID 
+           | '[' exp ']'
+
+varList ::= var {',' var}
+var ::= ID {attrTail}
+
+funcBody ::= '(' [parlist]  ')' [';'] '{' {blockStmt} '}'
+
+expBlock ::= '(' exp ')'
+
+nameList ::= ID {,ID}
+expList ::= exp {,exp}
+exp ::= | '(' exp ')' | literal | nil | new ID ['(' [expList] ')'] | ID | unOP exp
+        | exp '--'
+        | exp '++'
+        | exp '.' ID
+        | exp '[' exp ']'
+        | exp binOP exp
+        | exp '?' exp ':' exp
+        | exp '(' [expList] ')'
+
+classBody ::= | ID ['=' exp]
+              | ID funcBody
+
+enumBlocks ::= enumBlock {',' enumBlock} [',']
+enumBlock :: ID ['=' NUMBER]
+
+caseBlocks ::= {caseBlock} [default ':' {block}]
+caseBlock ::= case constLiteral {',' constLiteral} ':' {block} 
+
+parlist ::= par {',' par} ['...' ID]      // function parameter
+par ::= ID ['=' exp]
+
+literal ::= mapLiteral | constLiteral | arrLiteral | funcLiteral
+
+mapLiteral ::= '{' [fields] '}'
+fields ::= field {',' field} [',']
+field ::= <constLiteral|ID> ':' exp
+
+constLiteral ::= STRING | NUMBER | false | true
+
+arrLiteral ::= '[' [expList] ']'
+
+funcLiteral ::= func funcBody
+
+binOP ::= '+' | '-' | '*' | '/' | '//' | '%' | '&' | '|'
+        | '^' | '>>' | '<<' | '<=' | '>=' | '<' | '>' 
+        | '==' | '!=' | '&&' | '||'
+
+unOP ::= '~' | '!' | '-' | '--' | '++'
+
+assignOP ::= '=' | '+=' | '-=' | ':=' | '/=' | '*='
+           | '%=' | '&=' | '^=' | '|='
