@@ -34,8 +34,43 @@ func NewLexer(srcFile string, src []byte) *Lexer {
 	}
 }
 
+func (l *Lexer) NextTokenKind(kind int) *Token {
+	token := l.NextToken()
+	if token.Kind != kind {
+		panic(l.Line())
+	}
+	return token
+}
+
+func (l *Lexer) ConsumeIf(kind int) bool {
+	if l.Expect(kind) {
+		l.NextToken()
+		return true
+	}
+	return false
+}
+
+func (l *Lexer) Line() int {
+	return l.line
+}
+
+func (l *Lexer) Kth() int {
+	return l.kth
+}
+
+func (l *Lexer) SrcFile() string {
+	return l.srcFile
+}
+
+func (l *Lexer) Expect(kind int) bool {
+	return l.LookAhead().Kind == kind
+}
+
 // Look ahead 1 token
 func (l *Lexer) LookAhead() (token *Token) {
+	if l.aheadToken != nil {
+		return l.aheadToken
+	}
 	l.aheadToken = l.nextToken()
 	return l.aheadToken
 }
@@ -48,9 +83,13 @@ func (l *Lexer) NextToken() (token *Token) {
 	}
 	return l.nextToken()
 }
+
 func (l *Lexer) nextToken() (token *Token) {
 again:
-	l.skipWhiteSpace()
+	if breakLine := l.skipWhiteSpace(); breakLine && l.needAddSemi() {
+		l.genSemiToken()
+		return l.curToken
+	}
 	if l.reachEndOfFile() {
 		return eofToken
 	}
@@ -100,8 +139,6 @@ again:
 		} else if nextCh == '+' {
 			l.genToken(TOKEN_OP_INC, 2)
 			l.forward(1)
-		} else if isDigit(nextCh) {
-			l.scanNumber(1)
 		} else {
 			l.genToken(TOKEN_OP_ADD, 1)
 		}
@@ -113,8 +150,6 @@ again:
 		} else if nextCh == '-' {
 			l.genToken(TOKEN_OP_DEC, 2)
 			l.forward(1)
-		} else if isDigit(nextCh) {
-			l.scanNumber(-1)
 		} else {
 			l.genToken(TOKEN_OP_SUB, 1)
 		}
@@ -220,7 +255,7 @@ again:
 		goto again
 	default:
 		if isDigit(curCh) {
-			l.scanNumber(0)
+			l.scanNumber()
 		} else if isLetter_(curCh) {
 			l.scanIdentifier()
 		} else {
@@ -247,23 +282,16 @@ func (l *Lexer) scanIdentifier() {
 }
 
 // dec: 1234, hex: 0xFF, oct: 017, float: 0.123
-func (l *Lexer) scanNumber(signed int64) {
+func (l *Lexer) scanNumber() {
 	var num, base int64
-	var skip int
 	var value interface{}
 
-	if signed != 0 { // curCh == '+' or '-'
-		skip = 1
-	} else {
-		signed = 1
-	}
-
-	k := l.cursor + skip
+	k := l.cursor
 	firstDigit := l.src[k]
 	if firstDigit != '0' { // dec
 		base = 10
 	} else {
-		nextCh := l.lookAhead(skip + 1)
+		nextCh := l.lookAhead(1)
 		if nextCh == '.' { // float
 			k, value = l.scanFloat(k + 2)
 			goto end
@@ -272,7 +300,7 @@ func (l *Lexer) scanNumber(signed int64) {
 			base = 8
 			k += 1
 		} else if nextCh == 'x' { // hex
-			if gapCh := l.lookAhead(skip + 2); gapCh == CHAR_EOF || !isHexDigit(gapCh) {
+			if gapCh := l.lookAhead(2); gapCh == CHAR_EOF || !isHexDigit(gapCh) {
 				l.error("invalid hex number near %c", firstDigit)
 			}
 			base = 16
@@ -293,7 +321,7 @@ func (l *Lexer) scanNumber(signed int64) {
 		}
 		num = num*base + toNumber(l.src[k])
 	}
-	value = num * signed
+	value = num
 end:
 	contentLength := k - l.cursor
 	l.genToken(TOKEN_NUMBER, contentLength)
@@ -371,10 +399,11 @@ func (l *Lexer) skipComment() {
 }
 
 // skip \r, \n, \r\n, \t, space
-func (l *Lexer) skipWhiteSpace() {
+func (l *Lexer) skipWhiteSpace() (breakLine bool) {
 	for l.cursor < len(l.src) {
 		switch l.src[l.cursor] {
 		case CHAR_CR:
+			breakLine = true
 			nextCh := l.lookAhead(1)
 			if nextCh == CHAR_EOF {
 				break
@@ -387,6 +416,7 @@ func (l *Lexer) skipWhiteSpace() {
 			l.cursor++
 			fallthrough
 		case CHAR_LF:
+			breakLine = true
 			l.kth = 0
 			l.line++
 		case CHAR_SPACE:
@@ -398,6 +428,12 @@ func (l *Lexer) skipWhiteSpace() {
 		}
 		l.cursor++
 	}
+	// add breakLine at last of code so that we can tell
+	// if need add semicolon for the last statement
+	if l.cursor == len(l.src) {
+		return true
+	}
+	return
 }
 
 // lookAhead @k characters
@@ -455,4 +491,40 @@ func toNumber(digit byte) (result int64) {
 		result += 9
 	}
 	return result + int64(digit&15)
+}
+
+var addSemiTokens = map[int]struct{}{
+	TOKEN_IDENTIFIER:     struct{}{},
+	TOKEN_NUMBER:         struct{}{},
+	TOKEN_STRING:         struct{}{},
+	TOKEN_KW_BREAK:       struct{}{},
+	TOKEN_KW_FALLTHROUGH: struct{}{},
+	TOKEN_KW_CONTINUE:    struct{}{},
+	TOKEN_KW_RETURN:      struct{}{},
+	TOKEN_OP_INC:         struct{}{},
+	TOKEN_OP_DEC:         struct{}{},
+	TOKEN_SEP_RBRACK:     struct{}{},
+	TOKEN_SEP_RCURLY:     struct{}{},
+	TOKEN_SEP_RPAREN:     struct{}{},
+	TOKEN_KW_NIL:         struct{}{},
+	TOKEN_KW_TRUE:        struct{}{},
+	TOKEN_KW_FALSE:       struct{}{},
+}
+
+func needAddSemi(kind int) bool {
+	_, ok := addSemiTokens[kind]
+	return ok
+}
+
+func (l *Lexer) needAddSemi() bool {
+	return l.curToken != nil && needAddSemi(l.curToken.Kind)
+}
+
+func (l *Lexer) genSemiToken() {
+	l.curToken = &Token{
+		Kind:    TOKEN_SEP_SEMI,
+		Line:    l.curToken.Line,
+		Kth:     l.curToken.Kth + len(l.curToken.Content),
+		Content: ";",
+	}
 }

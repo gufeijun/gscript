@@ -28,7 +28,7 @@ func Test_IDENTIFIER_Token(t *testing.T) {
 				}
 			}
 		}
-		match(tl.tokens, NewLexer("Test_IDENTIFIER_Token", []byte(tl.srcCode.String())), t)
+		match(tl.getTokens(), NewLexer("Test_IDENTIFIER_Token", []byte(tl.srcCode.String())), t)
 	}
 }
 
@@ -43,7 +43,7 @@ func Test_STRING_Token(t *testing.T) {
 				}
 			}
 		}
-		match(tl.tokens, NewLexer("Test_STRING_Token", []byte(tl.srcCode.String())), t)
+		match(tl.getTokens(), NewLexer("Test_STRING_Token", []byte(tl.srcCode.String())), t)
 	}
 }
 
@@ -58,7 +58,7 @@ func Test_NUMBER_Token(t *testing.T) {
 				}
 			}
 		}
-		match(tl.tokens, NewLexer("Test_NUMBER_Token", []byte(tl.srcCode.String())), t)
+		match(tl.getTokens(), NewLexer("Test_NUMBER_Token", []byte(tl.srcCode.String())), t)
 	}
 }
 
@@ -73,7 +73,7 @@ func Test_OP_SEP_Token(t *testing.T) {
 				}
 			}
 		}
-		match(tl.tokens, NewLexer("Test_OP_Token", []byte(tl.srcCode.String())), t)
+		match(tl.getTokens(), NewLexer("Test_OP_Token", []byte(tl.srcCode.String())), t)
 	}
 }
 
@@ -81,6 +81,22 @@ type TokenList struct {
 	tokens    []*Token
 	srcCode   strings.Builder
 	line, kth int
+}
+
+func (tl *TokenList) getTokens() []*Token {
+	if tl.tokens == nil {
+		return nil
+	}
+	lastToken := tl.tokens[len(tl.tokens)-1]
+	if lastToken.Line == tl.line && needAddSemi(lastToken.Kind) {
+		tl.tokens = append(tl.tokens, &Token{
+			Kind:    TOKEN_SEP_SEMI,
+			Content: ";",
+			Line:    lastToken.Line,
+			Kth:     lastToken.Kth + len(lastToken.Content),
+		})
+	}
+	return tl.tokens
 }
 
 func (tl *TokenList) newToken(kind int, content string, value interface{}) {
@@ -126,6 +142,17 @@ func (tl *TokenList) writeCRLF() {
 		if roll != 0 {
 			break
 		}
+		if tl.tokens != nil {
+			latest := tl.tokens[len(tl.tokens)-1]
+			if needAddSemi(latest.Kind) {
+				tl.tokens = append(tl.tokens, &Token{
+					Kind:    TOKEN_SEP_SEMI,
+					Line:    latest.Line,
+					Kth:     latest.Kth + len(latest.Content),
+					Content: ";",
+				})
+			}
+		}
 		tl.line++
 		tl.kth = 0
 		// 1/base probability of writing break line
@@ -143,7 +170,7 @@ func match(tokens []*Token, l *Lexer, t *testing.T) {
 		got := l.NextToken()
 		gotV, wantV := tokenValue(got), tokenValue(want)
 		if gotV != wantV {
-			// t.Errorf("source code:\n %s\n", l.src)
+			t.Errorf("source code:\n %s\n", l.src)
 			t.Fatalf("want token %s, but got %s\n", wantV, gotV)
 		}
 		if got.Content != want.Content {
@@ -224,37 +251,21 @@ var OP_SEP_TOKEN_MAP = map[int]string{
 }
 
 var NUMBER_TOKEN_MAP = map[string]interface{}{
-	"0x1111":    0x1111,
-	"0":         0,
-	"+0":        0,
-	"-0":        0,
-	"0xFFFF":    0xffff,
-	"0xffff":    0xffff,
-	"0xabc8":    0xabc8,
-	"0765":      0765,
-	"01110":     01110,
-	"985":       985,
-	"211":       211,
-	"07654321":  07654321,
-	"996":       996,
-	"-868":      -868,
-	"-0xabcdef": -0xabcdef,
-	"-0765":     -0765,
-	"+868":      868,
-	"+0xabcdef": 0xabcdef,
-	"+0765":     0765,
-	"0.786":     0.786,
-	"+0.786":    0.786,
-	"-0.786":    -0.786,
-	"10.212":    10.212,
-	"+10.212":   10.212,
-	"-10.212":   -10.212,
-	"1.212":     1.212,
-	"+1.212":    1.212,
-	"-1.212":    -1.212,
-	"-19.212":   -19.212,
-	"19.212":    19.212,
-	"+19.212":   19.212,
+	"0x1111":   0x1111,
+	"0":        0,
+	"0xFFFF":   0xffff,
+	"0xffff":   0xffff,
+	"0xabc8":   0xabc8,
+	"0765":     0765,
+	"01110":    01110,
+	"985":      985,
+	"211":      211,
+	"07654321": 07654321,
+	"996":      996,
+	"0.786":    0.786,
+	"10.212":   10.212,
+	"1.212":    1.212,
+	"19.212":   19.212,
 }
 
 var STRING_TOKEN_MAP = map[string]string{
