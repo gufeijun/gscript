@@ -475,9 +475,7 @@ func parseParameters(l *Lexer) (pars []ast.Parameter, defaultValue bool) {
 func parseAnonymousFuncCallStmt(l *Lexer) (stmt *ast.AnonymousFuncCallStmt) {
 	stmt = new(ast.AnonymousFuncCallStmt)
 	stmt.FuncLiteral = parseFuncLiteral(l)
-	l.NextTokenKind(TOKEN_SEP_LPAREN) // (
-	stmt.CallArgs = parseExpList(l)
-	l.NextTokenKind(TOKEN_SEP_RPAREN) // )
+	stmt.CallArgs = parseExpListBlock(l)
 	stmt.CallTails = parseCallTails(l)
 	return
 }
