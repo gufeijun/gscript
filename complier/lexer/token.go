@@ -22,44 +22,52 @@ const (
 	TOKEN_SEP_RCURLY // }
 
 	// operator
-	TOKEN_OP_ADD    // +
-	TOKEN_OP_SUB    // -
-	TOKEN_OP_MUL    // *
-	TOKEN_OP_DIV    // /
-	TOKEN_OP_IDIV   // //
-	TOKEN_OP_MOD    // %
-	TOKEN_OP_LAND   // &&
-	TOKEN_OP_LOR    // ||
-	TOKEN_OP_AND    // &
-	TOKEN_OP_OR     // |
-	TOKEN_OP_XOR    // ^
-	TOKEN_OP_NOT    // ~
-	TOKEN_OP_LNOT   // !
-	TOKEN_OP_EQ     // ==
-	TOKEN_OP_NE     // !=
-	TOKEN_OP_LT     // <
-	TOKEN_OP_GT     // >
-	TOKEN_OP_LE     // <=
-	TOKEN_OP_GE     // >=
+	TOKEN_BINOP_START
+	TOKEN_OP_ADD  // +
+	TOKEN_OP_SUB  // -
+	TOKEN_OP_MUL  // *
+	TOKEN_OP_DIV  // /
+	TOKEN_OP_IDIV // //
+	TOKEN_OP_MOD  // %
+	TOKEN_OP_AND  // &
+	TOKEN_OP_OR   // |
+	TOKEN_OP_XOR  // ^
+	TOKEN_OP_SHR  // >>
+	TOKEN_OP_SHL  // <<
+	TOKEN_OP_LE   // <=
+	TOKEN_OP_GE   // >=
+	TOKEN_OP_LT   // <
+	TOKEN_OP_GT   // >
+	TOKEN_OP_EQ   // ==
+	TOKEN_OP_NE   // !=
+	TOKEN_OP_LAND // &&
+	TOKEN_OP_LOR  // ||
+	TOKEN_BINOP_END
+
+	TOKEN_OP_NOT  // ~
+	TOKEN_OP_LNOT // !
+	TOKEN_OP_INC  // ++
+	TOKEN_OP_DEC  // --
+
+	// don't change the order of constants between TOKEN_ASIGN_START and TOKEN_ASIGN_END
+	TOKEN_ASIGN_START
 	TOKEN_OP_ASSIGN // =
 	TOKEN_OP_CLONE  // :=
-	TOKEN_OP_INC    // ++
-	TOKEN_OP_DEC    // --
 	TOKEN_OP_ADDEQ  // +=
 	TOKEN_OP_SUBEQ  // -=
 	TOKEN_OP_MULEQ  // *=
 	TOKEN_OP_DIVEQ  // /=
 	TOKEN_OP_MODEQ  // %=
 	TOKEN_OP_ANDEQ  // &=
-	TOKEN_OP_OREQ   // |=
 	TOKEN_OP_XOREQ  // ^=
-	TOKEN_OP_SHL    // <<
-	TOKEN_OP_SHR    // >>
+	TOKEN_OP_OREQ   // |=
+	TOKEN_ASIGN_END
 
 	// keywords
 	TOKEN_KW_BREAK       // break
 	TOKEN_KW_CONTINUE    // continue
 	TOKEN_KW_FOR         // for
+	TOKEN_KW_WHILE       // while
 	TOKEN_KW_IF          // if
 	TOKEN_KW_ELIF        // elif
 	TOKEN_KW_ELSE        // else
@@ -77,10 +85,11 @@ const (
 	TOKEN_KW_CLASS       // class
 	TOKEN_KW_CONST       // const
 	TOKEN_KW_ENUM        // enum
-	TOKEN_KW_DELETE      // delete
-	TOKEN_KW_TYPE        // type
 	TOKEN_KW_LOOP        // loop
 	TOKEN_KW_IMPORT      // import
+	TOKEN_KW_EXPORT      // export
+	TOKEN_KW_AS          // as
+	TOKEN_KW_GOTO        // goto
 )
 
 var _eofToken = Token{Kind: TOKEN_EOF}
@@ -98,6 +107,7 @@ var keywords = map[string]int{
 	"break":       TOKEN_KW_BREAK,
 	"continue":    TOKEN_KW_CONTINUE,
 	"for":         TOKEN_KW_FOR,
+	"while":       TOKEN_KW_WHILE,
 	"if":          TOKEN_KW_IF,
 	"elif":        TOKEN_KW_ELIF,
 	"else":        TOKEN_KW_ELSE,
@@ -115,8 +125,9 @@ var keywords = map[string]int{
 	"class":       TOKEN_KW_CLASS,
 	"const":       TOKEN_KW_CONST,
 	"enum":        TOKEN_KW_ENUM,
-	"delete":      TOKEN_KW_DELETE,
-	"type":        TOKEN_KW_TYPE,
 	"loop":        TOKEN_KW_LOOP,
 	"import":      TOKEN_KW_IMPORT,
+	"export":      TOKEN_KW_EXPORT,
+	"as":          TOKEN_KW_AS,
+	"goto":        TOKEN_KW_GOTO,
 }
