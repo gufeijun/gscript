@@ -43,16 +43,6 @@ type UnOpExp struct {
 	Exp Exp
 }
 
-// exp++
-type IncExp struct {
-	Exp Exp
-}
-
-// exp--
-type DecExp struct {
-	Exp Exp
-}
-
 // . ==> []
 // a op b or a[b] or a.b
 type BinOpExp struct {
