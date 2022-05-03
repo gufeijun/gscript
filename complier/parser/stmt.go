@@ -164,7 +164,7 @@ func parseSwitchStmt(l *Lexer) (stmt *ast.SwitchStmt) {
 
 	for l.LookAhead().Kind == TOKEN_KW_CASE {
 		l.NextToken() // case
-		stmt.Cases = append(stmt.Cases, parseConstLiterals(l))
+		stmt.Cases = append(stmt.Cases, parseExpList(l))
 		l.NextTokenKind(TOKEN_SEP_COLON) // :
 		stmt.Blocks = append(stmt.Blocks, parseBlockStmts(l))
 	}

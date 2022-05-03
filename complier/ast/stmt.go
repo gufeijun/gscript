@@ -117,7 +117,7 @@ type EnumStmt struct {
 
 type SwitchStmt struct {
 	Value   Exp
-	Cases   [][]interface{} // true, false, NUMBER, STRING
+	Cases   [][]Exp
 	Blocks  [][]BlockStmt
 	Default []BlockStmt
 }

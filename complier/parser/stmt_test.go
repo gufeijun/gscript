@@ -321,7 +321,7 @@ default:
 		},
 		{
 			Value: &NameExp{"a"},
-			Cases: [][]interface{}{{int64(1)}, {int64(2), int64(3)}},
+			Cases: [][]Exp{{&NumberLiteralExp{int64(1)}}, {&NumberLiteralExp{int64(2)}, &NumberLiteralExp{int64(3)}}},
 			Blocks: [][]BlockStmt{
 				{parseVarOpOrLabel(newLexer("i++")), parseVarDeclStmt(newLexer("let b,c = 1,2"))},
 				{parseVarOpOrLabel(newLexer("i--")), parseVarOpOrLabel(newLexer("call(a,b)"))},
@@ -329,7 +329,7 @@ default:
 		},
 		{
 			Value:   &NameExp{"a"},
-			Cases:   [][]interface{}{{"hello"}},
+			Cases:   [][]Exp{{&StringLiteralExp{"hello"}}},
 			Blocks:  [][]BlockStmt{{parseIncOrDecVar(newLexer("++i"))}},
 			Default: []BlockStmt{parseIncOrDecVar(newLexer("--i"))},
 		},
