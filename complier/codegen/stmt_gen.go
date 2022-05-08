@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"encoding/binary"
 	"fmt"
 	"gscript/complier/ast"
 	"gscript/complier/parser"
@@ -31,6 +32,7 @@ func genEnumStmt(stmts []*ast.EnumStmt, ctx *Context) {
 }
 
 func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
+	var gotos []unhandledGoto
 	for _, stmt := range stmts {
 		if block, ok := stmt.(ast.Block); ok {
 			genBlock(block, ctx)
@@ -58,11 +60,43 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 			genFallthroughStmt(stmt.(*ast.FallthroughStmt), ctx)
 		case *ast.EnumStmt:
 			continue
+		case *ast.LabelStmt:
+			_stmt := stmt.(*ast.LabelStmt)
+			ctx.validLabels[_stmt.Name] = label{_stmt.Name, ctx.textSize(), *ctx.nt.nameIdx}
+			// when exit block, make labels inside block invalid
+			defer func() { delete(ctx.validLabels, _stmt.Name) }()
+		case *ast.GotoStmt:
+			gotos = append(gotos, genGotoStmt(stmt.(*ast.GotoStmt), ctx))
 		default:
 			panic(fmt.Sprintf("do not support stmt:%T", stmt))
 		}
 	}
+	handleGoto(ctx, gotos)
 	return
+}
+
+func handleGoto(ctx *Context, gotos []unhandledGoto) {
+	writeUint := func(start int, val uint32) {
+		binary.LittleEndian.PutUint32(ctx.buf[start:start+4], val)
+	}
+	for _, _goto := range gotos {
+		label, ok := ctx.validLabels[_goto.label]
+		if !ok {
+			panic(fmt.Sprintf("invalid goto label: %s", _goto.label))
+		}
+		writeUint(_goto.jumpPos, label.addr)
+		writeUint(_goto.resizePos, label.nameTableSize)
+	}
+}
+
+func genGotoStmt(stmt *ast.GotoStmt, ctx *Context) unhandledGoto {
+	resizePos := ctx.insResizeNameTable(0)
+	jumpPos := ctx.insJumpAbs(0)
+	return unhandledGoto{
+		label:     stmt.Label,
+		resizePos: resizePos,
+		jumpPos:   jumpPos,
+	}
 }
 
 func genFallthroughStmt(stmt *ast.FallthroughStmt, ctx *Context) {

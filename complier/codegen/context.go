@@ -7,17 +7,19 @@ import (
 )
 
 type Context struct {
-	buf []byte
-	ct  *ConstTable
-	nt  *NameTable
-	bs  *blockStack
+	buf         []byte
+	ct          *ConstTable
+	nt          *NameTable
+	bs          *blockStack
+	validLabels map[string]label
 }
 
 func newContext() *Context {
 	return &Context{
-		ct: newConstTable(),
-		nt: NewNameTable(),
-		bs: newBlockStack(),
+		ct:          newConstTable(),
+		nt:          NewNameTable(),
+		bs:          newBlockStack(),
+		validLabels: make(map[string]label),
 	}
 }
 
@@ -39,9 +41,11 @@ func (ctx *Context) insPushName() {
 	ctx.writeIns(proto.INS_PUSH_NAME)
 }
 
-func (ctx *Context) insResizeNameTable(size uint32) {
+func (ctx *Context) insResizeNameTable(size uint32) int {
 	ctx.writeIns(proto.INS_RESIZE_NAMETABLE)
+	pos := len(ctx.buf)
 	ctx.writeUint(size)
+	return pos
 }
 
 func (ctx *Context) setAddr(pos int, addr uint32) {
@@ -133,4 +137,16 @@ func (ctx *Context) leaveBlock(size uint32, varDecl bool) {
 
 func (ctx *Context) textSize() uint32 {
 	return uint32(len(ctx.buf))
+}
+
+type unhandledGoto struct {
+	label     string
+	resizePos int
+	jumpPos   int
+}
+
+type label struct {
+	name          string
+	addr          uint32
+	nameTableSize uint32
 }
