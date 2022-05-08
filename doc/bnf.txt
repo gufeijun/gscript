@@ -30,7 +30,7 @@ stmt ::= | varDeclare ';'                                       // declare varia
          | switch expBlock [';'] '{' caseBlocks '}'
          | incOrDecVar ';'
 
-varDeclare ::= <const|let> nameList [<'='|':='> expList]
+varDeclare ::= <const|let> nameList '=' expList]
 varAssign ::= var {',' var} assignOP expList
 varIncOrDec ::= var <'++'|'--'>
 incOrDecVar ::= <'++'|'--'> var
