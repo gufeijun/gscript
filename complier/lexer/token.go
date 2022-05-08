@@ -27,11 +27,11 @@ const (
 	TOKEN_OP_SUB  // -
 	TOKEN_OP_MUL  // *
 	TOKEN_OP_DIV  // /
-	TOKEN_OP_IDIV // //
 	TOKEN_OP_MOD  // %
 	TOKEN_OP_AND  // &
-	TOKEN_OP_OR   // |
 	TOKEN_OP_XOR  // ^
+	TOKEN_OP_OR   // |
+	TOKEN_OP_IDIV // //
 	TOKEN_OP_SHR  // >>
 	TOKEN_OP_SHL  // <<
 	TOKEN_OP_LE   // <=
@@ -52,7 +52,6 @@ const (
 	// don't change the order of constants between TOKEN_ASIGN_START and TOKEN_ASIGN_END
 	TOKEN_ASIGN_START
 	TOKEN_OP_ASSIGN // =
-	TOKEN_OP_CLONE  // :=
 	TOKEN_OP_ADDEQ  // +=
 	TOKEN_OP_SUBEQ  // -=
 	TOKEN_OP_MULEQ  // *=

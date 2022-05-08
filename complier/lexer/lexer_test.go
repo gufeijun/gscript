@@ -235,7 +235,6 @@ var OP_SEP_TOKEN_MAP = map[int]string{
 	TOKEN_OP_LE:      "<=",
 	TOKEN_OP_GE:      ">=",
 	TOKEN_OP_ASSIGN:  "=",
-	TOKEN_OP_CLONE:   ":=",
 	TOKEN_OP_INC:     "++",
 	TOKEN_OP_DEC:     "--",
 	TOKEN_OP_ADDEQ:   "+=",

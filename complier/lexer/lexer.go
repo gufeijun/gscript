@@ -106,12 +106,6 @@ again:
 	case '"', '\'':
 		l.scanStringLiteral()
 	case ':':
-		nextCh := l.lookAhead(1)
-		if nextCh == '=' {
-			l.genToken(TOKEN_OP_CLONE, 2)
-			l.forward(1)
-			break
-		}
 		l.genToken(TOKEN_SEP_COLON, 1)
 	case ';':
 		l.genToken(TOKEN_SEP_SEMI, 1)
@@ -494,21 +488,21 @@ func toNumber(digit byte) (result int64) {
 }
 
 var addSemiTokens = map[int]struct{}{
-	TOKEN_IDENTIFIER:     struct{}{},
-	TOKEN_NUMBER:         struct{}{},
-	TOKEN_STRING:         struct{}{},
-	TOKEN_KW_BREAK:       struct{}{},
-	TOKEN_KW_FALLTHROUGH: struct{}{},
-	TOKEN_KW_CONTINUE:    struct{}{},
-	TOKEN_KW_RETURN:      struct{}{},
-	TOKEN_OP_INC:         struct{}{},
-	TOKEN_OP_DEC:         struct{}{},
-	TOKEN_SEP_RBRACK:     struct{}{},
-	TOKEN_SEP_RCURLY:     struct{}{},
-	TOKEN_SEP_RPAREN:     struct{}{},
-	TOKEN_KW_NIL:         struct{}{},
-	TOKEN_KW_TRUE:        struct{}{},
-	TOKEN_KW_FALSE:       struct{}{},
+	TOKEN_IDENTIFIER:     {},
+	TOKEN_NUMBER:         {},
+	TOKEN_STRING:         {},
+	TOKEN_KW_BREAK:       {},
+	TOKEN_KW_FALLTHROUGH: {},
+	TOKEN_KW_CONTINUE:    {},
+	TOKEN_KW_RETURN:      {},
+	TOKEN_OP_INC:         {},
+	TOKEN_OP_DEC:         {},
+	TOKEN_SEP_RBRACK:     {},
+	TOKEN_SEP_RCURLY:     {},
+	TOKEN_SEP_RPAREN:     {},
+	TOKEN_KW_NIL:         {},
+	TOKEN_KW_TRUE:        {},
+	TOKEN_KW_FALSE:       {},
 }
 
 func needAddSemi(kind int) bool {
