@@ -22,7 +22,7 @@ func TestParseTerm12(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm12(l)
+		exp := parseTerm12(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term12 failed:\n%s\n", src)
 		}
@@ -40,7 +40,7 @@ func TestParseTerm11(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm11(l)
+		exp := parseTerm11(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term11 failed:\n%s\n", src)
 		}
@@ -58,7 +58,7 @@ func TestParseTerm10(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm10(l)
+		exp := parseTerm10(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term10 failed:\n%s\n", src)
 		}
@@ -76,7 +76,7 @@ func TestParseTerm9(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm9(l)
+		exp := parseTerm9(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term9 failed:\n%s\n", src)
 		}
@@ -94,7 +94,7 @@ func TestParseTerm8(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm8(l)
+		exp := parseTerm8(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term8 failed:\n%s\n", src)
 		}
@@ -112,7 +112,7 @@ func TestParseTerm7(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm7(l)
+		exp := parseTerm7(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term7 failed:\n%s\n", src)
 		}
@@ -132,7 +132,7 @@ func TestParseTerm6(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm6(l)
+		exp := parseTerm6(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term6 failed:\n%s\n", src)
 		}
@@ -154,7 +154,7 @@ func TestParseTerm5(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm5(l)
+		exp := parseTerm5(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term5 failed:\n%s\n", src)
 		}
@@ -172,7 +172,7 @@ func TestParseTerm4(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm4(l)
+		exp := parseTerm4(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term4 failed:\n%s\n", src)
 		}
@@ -194,7 +194,7 @@ func TestParseTerm3(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm3(l)
+		exp := parseTerm3(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term3 failed:\n%s\n", src)
 		}
@@ -218,7 +218,7 @@ func TestParseTerm2(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm2(l)
+		exp := parseTerm2(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term2 failed:\n%s\n", src)
 		}
@@ -242,7 +242,7 @@ func TestParseTerm1(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm1(l)
+		exp := parseTerm1(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term1 failed:\n%s\n", src)
 		}
@@ -265,7 +265,7 @@ func TestParseTerm0(t *testing.T) {
 
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseTerm0(l)
+		exp := parseTerm0(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse term0 failed:\n%s\n", src)
 		}
@@ -297,7 +297,7 @@ func TestFuncCallOrAttrExp(t *testing.T) {
 		Exp2: &NumberLiteralExp{int64(1)},
 	}
 	l := newLexer(src)
-	exp := parseFuncCallOrAttrExp(l)
+	exp := parseFuncCallOrAttrExp(NewParser(l))
 	if !reflect.DeepEqual(want, exp) {
 		t.Fatalf("test FuncCallOrAttr failed:\n%s\n", src)
 	}
@@ -315,7 +315,7 @@ func TestFuncCallExp(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseFuncCallOrAttrExp(l)
+		exp := parseFuncCallOrAttrExp(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse function call failed:\n%s\n", src)
 		}
@@ -338,7 +338,7 @@ func TestParseMapAccessExp(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseFuncCallOrAttrExp(l)
+		exp := parseFuncCallOrAttrExp(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse map access failed:\n%s\n", src)
 		}
@@ -361,7 +361,7 @@ func TestParseAttributeAccessExp(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseFuncCallOrAttrExp(l)
+		exp := parseFuncCallOrAttrExp(NewParser(l))
 		if !reflect.DeepEqual(wants[i], exp) {
 			t.Fatalf("parse attribute access failed:\n%s\n", src)
 		}
@@ -402,7 +402,7 @@ func TestParseArrLiteralExp(t *testing.T) {
 	}
 	for i, literal := range arrLiterals {
 		l := newLexer(literal)
-		exp := parseArrLiteralExp(l)
+		exp := parseArrLiteralExp(NewParser(l))
 		if !reflect.DeepEqual(exp, wants[i]) {
 			t.Fatalf("parse array literal failed:\n%s\n", literal)
 		}
@@ -412,8 +412,6 @@ func TestParseArrLiteralExp(t *testing.T) {
 func TestParseMapLiteralExp(t *testing.T) {
 	var mapLiterals = []string{
 		`{}`,
-		`{a}`,
-		`{a,1}`,
 		`{interger:1,string:"b",float:1.89}`,
 		`{true:true,false:false}`,
 		`{1:"1",3.14:"3.14",}`,
@@ -421,8 +419,6 @@ func TestParseMapLiteralExp(t *testing.T) {
 	}
 	var wants = []*MapLiteralExp{
 		{nil, nil},
-		{[]interface{}{"a"}, []Exp{&NilExp{}}},
-		{[]interface{}{"a", int64(1)}, []Exp{&NilExp{}, &NilExp{}}},
 		{[]interface{}{"interger", "string", "float"},
 			[]Exp{&NumberLiteralExp{int64(1)}, &StringLiteralExp{"b"}, &NumberLiteralExp{float64(1.89)}}},
 		{[]interface{}{true, false}, []Exp{&TrueExp{}, &FalseExp{}}},
@@ -431,7 +427,7 @@ func TestParseMapLiteralExp(t *testing.T) {
 	}
 	for i, literal := range mapLiterals {
 		l := newLexer(literal)
-		exp := parseMapLiteralExp(l)
+		exp := parseMapLiteralExp(NewParser(l))
 		if !reflect.DeepEqual(exp, wants[i]) {
 			t.Fatalf("parse map literal failed:\n%s\n", literal)
 		}
@@ -455,7 +451,7 @@ func TestNewObjectExp(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		exp := parseNewObjectExp(l)
+		exp := parseNewObjectExp(NewParser(l))
 		if !reflect.DeepEqual(exp, wants[i]) {
 			t.Fatalf("parse new obejct failed:\n%s\n", src)
 		}
@@ -486,7 +482,7 @@ func TestParseFuncLiteralExp(t *testing.T) {
 	}
 	for i := range funcLiterals {
 		l := newLexer(funcLiterals[i])
-		exp := parseFuncLiteralExp(l)
+		exp := parseFuncLiteralExp(NewParser(l))
 		if wants[i].VarArg != exp.VarArg {
 			t.Fatalf("parse func literal vararg failed:\n%s\n", funcLiterals[i])
 		}

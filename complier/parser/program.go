@@ -1,104 +1,94 @@
 package parser
 
 import (
-	"fmt"
 	"gscript/complier/ast"
 	. "gscript/complier/lexer"
-	"os"
 )
 
-func Parse(l *Lexer) *ast.Program {
-	program := parseProgram(l)
-	if !l.Expect(TOKEN_EOF) {
-		fmt.Println("statement after export is not allowed!!!")
-		os.Exit(0)
-	}
-	return program
-}
-
-func parseProgram(l *Lexer) *ast.Program {
+func (p *Parser) parseProgram() *ast.Program {
 	return &ast.Program{
-		File:       l.SrcFile(),
-		Imports:    parseImports(l),
-		BlockStmts: parseBlockStmts(l),
-		Export:     parseExport(l),
+		File:       p.l.SrcFile(),
+		Imports:    p.parseImports(),
+		BlockStmts: p.parseBlockStmts(),
+		Export:     p.parseExport(),
 	}
 }
 
-func parseImports(l *Lexer) []ast.Import {
+func (p *Parser) parseImports() []ast.Import {
 	var imports []ast.Import
 
-	for l.Expect(TOKEN_KW_IMPORT) {
-		imports = append(imports, parseImport(l))
-		l.ConsumeIf(TOKEN_SEP_SEMI)
+	for p.l.Expect(TOKEN_KW_IMPORT) {
+		imports = append(imports, p.parseImport())
+		p.l.ConsumeIf(TOKEN_SEP_SEMI)
 	}
 	return imports
 }
 
 // import net,http as n,h
 // import "./localPackage"
-func parseImport(l *Lexer) (ipt ast.Import) {
-	l.NextToken()
+func (p *Parser) parseImport() (ipt ast.Import) {
+	p.l.NextToken()
 	for {
-		ahead := l.LookAhead()
+		ahead := p.l.LookAhead()
 		stdLib := false
 		if ahead.Kind == TOKEN_IDENTIFIER {
 			stdLib = true
 		} else if ahead.Kind != TOKEN_STRING {
-			panic(l.Line())
+			panic(p.l.Line())
 		}
 		ipt.Libs = append(ipt.Libs, ast.Lib{
 			Stdlib: stdLib,
 			Path:   ahead.Value.(string),
 		})
-		l.NextToken()
-		if !l.Expect(TOKEN_SEP_COMMA) {
+		p.l.NextToken()
+		if !p.l.Expect(TOKEN_SEP_COMMA) {
 			break
 		}
-		l.NextToken()
+		p.l.NextToken()
 	}
-	if !l.Expect(TOKEN_KW_AS) {
+	if !p.l.Expect(TOKEN_KW_AS) {
 		return
 	}
-	l.NextToken()
+	p.l.NextToken()
 	for i := 0; ; i++ {
-		if !l.Expect(TOKEN_IDENTIFIER) {
-			panic(l.Line())
+		if !p.l.Expect(TOKEN_IDENTIFIER) {
+			panic(p.l.Line())
 		}
-		ipt.Libs[i].Alia = l.NextToken().Content
-		if !l.Expect(TOKEN_SEP_COMMA) {
+		ipt.Libs[i].Alia = p.l.NextToken().Content
+		if !p.l.Expect(TOKEN_SEP_COMMA) {
 			return
 		}
-		l.NextToken()
+		p.l.NextToken()
 	}
 }
 
-func parseBlockStmts(l *Lexer) []ast.BlockStmt {
+func (p *Parser) parseBlockStmts() []ast.BlockStmt {
 	var blockStmts []ast.BlockStmt
 	for {
-		switch l.LookAhead().Kind {
+		switch p.l.LookAhead().Kind {
 		case TOKEN_SEP_LCURLY:
-			blockStmts = append(blockStmts, parseBlock(l))
+			blockStmts = append(blockStmts, p.parseBlock())
 		case TOKEN_KW_EXPORT, TOKEN_EOF, TOKEN_KW_CASE, TOKEN_KW_DEFAULT, TOKEN_SEP_RCURLY:
 			return blockStmts
 		default:
-			blockStmts = append(blockStmts, parseStmt(l))
+			blockStmts = append(blockStmts, p.parseStmt())
 		}
 	}
 }
 
-func parseBlock(l *Lexer) (block ast.Block) {
-	l.NextTokenKind(TOKEN_SEP_LCURLY)
-	block.Blocks = parseBlockStmts(l)
-	l.NextTokenKind(TOKEN_SEP_RCURLY)
+func (p *Parser) parseBlock() (block ast.Block) {
+	p.l.NextTokenKind(TOKEN_SEP_LCURLY)
+	block.Blocks = p.parseBlockStmts()
+	p.l.NextTokenKind(TOKEN_SEP_RCURLY)
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
 	return block
 }
 
-func parseExport(l *Lexer) (ept ast.Export) {
-	if !l.ConsumeIf(TOKEN_KW_EXPORT) {
+func (p *Parser) parseExport() (ept ast.Export) {
+	if !p.l.ConsumeIf(TOKEN_KW_EXPORT) {
 		return
 	}
-	ept.Exp = parseExp(l)
-	l.ConsumeIf(TOKEN_SEP_SEMI)
+	ept.Exp = parseExp(p)
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
 	return
 }

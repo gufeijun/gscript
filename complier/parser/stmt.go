@@ -5,63 +5,68 @@ import (
 	. "gscript/complier/lexer"
 )
 
-func parseStmt(l *Lexer) ast.Stmt {
+func (p *Parser) parseStmt() ast.Stmt {
 	var stmt ast.Stmt
-	switch l.LookAhead().Kind {
+	switch p.l.LookAhead().Kind {
 	case TOKEN_KW_CONST, TOKEN_KW_LET:
-		stmt = parseVarDeclStmt(l) // tested
+		stmt = p.parseVarDeclStmt()
 	case TOKEN_IDENTIFIER:
-		stmt = parseVarOpOrLabel(l) // tested
+		stmt = p.parseVarOpOrLabel()
 	case TOKEN_KW_FUNC:
-		stmt = parseFunc(l) // tested
+		stmt = p.parseFunc()
 	case TOKEN_KW_BREAK:
-		stmt = parseBreakStmt(l) // tested
+		stmt = p.parseBreakStmt()
 	case TOKEN_KW_CONTINUE:
-		stmt = parseContinueStmt(l) // tested
+		stmt = p.parseContinueStmt()
 	case TOKEN_KW_RETURN:
-		stmt = parseReturnStmt(l) // tested
+		stmt = p.parseReturnStmt()
 	case TOKEN_KW_GOTO:
-		stmt = parseGotoStmt(l) // tested
+		stmt = p.parseGotoStmt()
 	case TOKEN_KW_FALLTHROUGH:
-		stmt = parseFallthroughStmt(l) // tested
+		stmt = p.parseFallthroughStmt()
 	case TOKEN_KW_LOOP:
-		stmt = parseLoopStmt(l) // tested
+		stmt = p.parseLoopStmt()
 	case TOKEN_KW_WHILE:
-		stmt = parseWhileStmt(l) // tested
+		stmt = p.parseWhileStmt()
 	case TOKEN_KW_FOR:
-		stmt = parseForStmt(l) // tested
+		stmt = p.parseForStmt()
 	case TOKEN_KW_IF:
-		stmt = parseIfStmt(l) // tested
+		stmt = p.parseIfStmt()
 	case TOKEN_KW_CLASS:
-		stmt = parseClassStmt(l)
+		stmt = p.parseClassStmt()
 	case TOKEN_KW_ENUM:
-		stmt = parseEnumStmt(l) // tested
+		stmt = p.parseEnumStmt()
 	case TOKEN_KW_SWITCH:
-		stmt = parseSwitchStmt(l) // tested
+		stmt = p.parseSwitchStmt()
 	case TOKEN_OP_INC, TOKEN_OP_DEC:
-		stmt = parseIncOrDecVar(l) // tested
+		stmt = p.parseIncOrDecVar()
 	default:
-		panic(l.Line())
+		panic(p.l.Line())
 	}
-	l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
 	return stmt
 }
 
-// varDeclStmt ::= (const|let) id {,id} (:=|=) exp {,exp} ;
-func parseVarDeclStmt(l *Lexer) (stmt *ast.VarDeclStmt) {
+// varDeclStmt ::= (const|let) id {,id} = exp {,exp} ;
+func (p *Parser) parseVarDeclStmt() (stmt *ast.VarDeclStmt) {
 	stmt = new(ast.VarDeclStmt)
-	stmt.Const = l.NextToken().Kind == TOKEN_KW_CONST // const or let
-	stmt.Lefts = parseNameList(l)                     // id {,id}
-	if !l.Expect(TOKEN_OP_CLONE) && !l.Expect(TOKEN_OP_ASSIGN) {
+	stmt.Const = p.l.NextToken().Kind == TOKEN_KW_CONST // const or let
+	stmt.Lefts = p.parseNameList()                      // id {,id}
+	if !p.l.Expect(TOKEN_OP_ASSIGN) {
+		if stmt.Const {
+			panic("const variable should have initial value") // TODO
+		}
 		stmt.Rights = make([]ast.Exp, len(stmt.Lefts))
 		for i := range stmt.Rights {
 			stmt.Rights[i] = &ast.NilExp{}
 		}
-		l.NextTokenKind(TOKEN_SEP_SEMI) // ;
 		return
 	}
-	stmt.DeepEq = l.NextToken().Kind == TOKEN_OP_CLONE // = or :=
-	stmt.Rights = parseExpList(l)                      // exp {,exp}
+	p.l.NextToken()
+	stmt.Rights = parseExpList(p) // exp {,exp}
+	if len(stmt.Lefts) < len(stmt.Rights) {
+		panic("") // TODO
+	}
 	return
 }
 
@@ -69,40 +74,45 @@ func parseVarDeclStmt(l *Lexer) (stmt *ast.VarDeclStmt) {
 //          | varIncOrDec ;						# case2: var++ or var--
 //          | var '(' {explist} ')' callTail ;	# case3: function call
 //          | ID ':'							# case4: label
-func parseVarOpOrLabel(l *Lexer) ast.Stmt {
-	name := l.NextToken().Content
-	if l.ConsumeIf(TOKEN_SEP_COLON) { // case4
-		return &ast.LabelStmt{name}
+func (p *Parser) parseVarOpOrLabel() ast.Stmt {
+	name := p.l.NextToken().Content
+	if p.l.ConsumeIf(TOKEN_SEP_COLON) { // case4
+		label := &ast.LabelStmt{name}
+		p.Labels = append(p.Labels, label)
+		return label
 	}
-	v := _parseVar(l, name)
-	switch l.LookAhead().Kind {
+	v := p._parseVar(name)
+	switch p.l.LookAhead().Kind {
 	case TOKEN_OP_INC, TOKEN_OP_DEC: // case2
-		stmt := _incOrDec2Assign(l.NextToken().Kind, v)
+		stmt := _incOrDec2Assign(p.l.NextToken().Kind, v)
 		return stmt
 	case TOKEN_SEP_LPAREN: // case3
 		stmt := new(ast.NamedFuncCallStmt)
 		stmt.Var = v
-		stmt.Args = parseExpListBlock(l)
-		stmt.CallTails = parseCallTails(l)
+		stmt.Args = parseExpListBlock(p)
+		stmt.CallTails = p.parseCallTails()
 		return stmt
 	default: // case 1
-		return _parseAssignStmt(l, v)
+		return p._parseAssignStmt(v)
 	}
 }
 
 // has parsed first var
-func _parseAssignStmt(l *Lexer, v ast.Var) *ast.VarAssignStmt {
+func (p *Parser) _parseAssignStmt(v ast.Var) *ast.VarAssignStmt {
 	var stmt ast.VarAssignStmt
 	stmt.Lefts = append(stmt.Lefts, v)
-	for l.ConsumeIf(TOKEN_SEP_COMMA) {
-		stmt.Lefts = append(stmt.Lefts, parseVar(l))
+	for p.l.ConsumeIf(TOKEN_SEP_COMMA) {
+		stmt.Lefts = append(stmt.Lefts, p.parseVar())
 	}
-	token := l.NextToken()
+	token := p.l.NextToken()
 	if !_isAsignOp(token.Kind) {
-		panic(l.Line())
+		panic(p.l.Line())
 	}
 	stmt.AssignOp = token.Kind
-	stmt.Rights = parseExpList(l)
+	stmt.Rights = parseExpList(p)
+	if len(stmt.Lefts) < len(stmt.Rights) {
+		panic("") // TODO
+	}
 	return &stmt
 }
 
@@ -120,61 +130,59 @@ func _incOrDec2Assign(kind int, v ast.Var) (stmt *ast.VarAssignStmt) {
 }
 
 // ++i ==> i+=1    --i ==> i-=1
-func parseIncOrDecVar(l *Lexer) (stmt *ast.VarAssignStmt) {
-	return _incOrDec2Assign(l.NextToken().Kind, parseVar(l))
+func (p *Parser) parseIncOrDecVar() (stmt *ast.VarAssignStmt) {
+	return _incOrDec2Assign(p.l.NextToken().Kind, p.parseVar())
 }
 
-func _parseVar(l *Lexer, prefix string) (v ast.Var) {
+func (p *Parser) _parseVar(prefix string) (v ast.Var) {
 	v.Prefix = prefix
-	v.Attrs = parseAttrTail(l)
+	v.Attrs = p.parseAttrTail()
 	return
 }
 
-func parseVar(l *Lexer) (v ast.Var) {
-	if !l.Expect(TOKEN_IDENTIFIER) {
-		panic(l.Line())
+func (p *Parser) parseVar() (v ast.Var) {
+	if !p.l.Expect(TOKEN_IDENTIFIER) {
+		panic(p.l.Line())
 	}
-	return _parseVar(l, l.NextToken().Content)
+	return p._parseVar(p.l.NextToken().Content)
 }
 
-func parseAttrTail(l *Lexer) (exps []ast.Exp) {
+func (p *Parser) parseAttrTail() (exps []ast.Exp) {
 	for {
-		switch l.LookAhead().Kind {
+		switch p.l.LookAhead().Kind {
 		case TOKEN_SEP_DOT:
-			l.NextToken()
+			p.l.NextToken()
 			// a.b ==> a["b"]
-			token := l.NextTokenKind(TOKEN_IDENTIFIER)
+			token := p.l.NextTokenKind(TOKEN_IDENTIFIER)
 			exps = append(exps, &ast.StringLiteralExp{token.Content})
 		case TOKEN_SEP_LBRACK: //[
-			l.NextToken()
-			exps = append(exps, parseExp(l))
-			l.NextTokenKind(TOKEN_SEP_RBRACK)
+			p.l.NextToken()
+			exps = append(exps, parseExp(p))
+			p.l.NextTokenKind(TOKEN_SEP_RBRACK)
 		default:
 			return
 		}
 	}
 }
 
-func parseSwitchStmt(l *Lexer) (stmt *ast.SwitchStmt) {
+func (p *Parser) parseSwitchStmt() (stmt *ast.SwitchStmt) {
 	stmt = new(ast.SwitchStmt)
-	l.NextToken()                 // switch
-	stmt.Value = parseExpBlock(l) // (condition)
-	l.ConsumeIf(TOKEN_SEP_SEMI)
-	l.NextTokenKind(TOKEN_SEP_LCURLY) // {
+	p.l.NextToken()                // switch
+	stmt.Value = p.parseExpBlock() // (condition)
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.l.NextTokenKind(TOKEN_SEP_LCURLY) // {
 
-	for l.LookAhead().Kind == TOKEN_KW_CASE {
-		l.NextToken() // case
-		stmt.Cases = append(stmt.Cases, parseExpList(l))
-		l.NextTokenKind(TOKEN_SEP_COLON) // :
-		stmt.Blocks = append(stmt.Blocks, parseBlockStmts(l))
+	for p.l.ConsumeIf(TOKEN_KW_CASE) {
+		stmt.Cases = append(stmt.Cases, parseExpList(p))
+		p.l.NextTokenKind(TOKEN_SEP_COLON) // :
+		stmt.Blocks = append(stmt.Blocks, p.parseBlockStmts())
 	}
 
-	if l.Expect(TOKEN_KW_DEFAULT) { // default
-		l.NextToken()
-		l.NextTokenKind(TOKEN_SEP_COLON)
-		stmt.Default = parseBlockStmts(l)
+	if p.l.ConsumeIf(TOKEN_KW_DEFAULT) { // default
+		p.l.NextTokenKind(TOKEN_SEP_COLON)
+		stmt.Default = p.parseBlockStmts()
 	}
-	l.NextTokenKind(TOKEN_SEP_RCURLY) // }
+	p.l.NextTokenKind(TOKEN_SEP_RCURLY) // }
 	return
 }
 
@@ -183,123 +191,128 @@ func isConstLiteral(token *Token) bool {
 		token.Kind == TOKEN_STRING || token.Kind == TOKEN_NUMBER
 }
 
-func parseConstLiterals(l *Lexer) (literals []interface{}) {
-	literals = append(literals, parseConstLiteral(l))
-	for l.LookAhead().Kind == TOKEN_SEP_COMMA {
-		l.NextToken()
-		literals = append(literals, parseConstLiteral(l))
+func (p *Parser) parseConstLiterals() (literals []interface{}) {
+	literals = append(literals, p.parseConstLiteral())
+	for p.l.Expect(TOKEN_SEP_COMMA) {
+		p.l.NextToken()
+		literals = append(literals, p.parseConstLiteral())
 	}
 	return
 }
 
-func parseConstLiteral(l *Lexer) interface{} {
-	token := l.NextToken()
+func (p *Parser) parseConstLiteral() interface{} {
+	token := p.l.NextToken()
 	if !isConstLiteral(token) {
-		panic(l.Line())
+		panic(p.l.Line())
 	}
 	return token.Value
 }
 
-func parseEnumStmt(l *Lexer) (stmt ast.EnumStmt) {
-	l.NextToken()
-	l.NextTokenKind(TOKEN_SEP_LCURLY)
+func (p *Parser) parseEnumStmt() (stmt *ast.EnumStmt) {
+	stmt = new(ast.EnumStmt)
+	p.l.NextToken()
+	p.l.NextTokenKind(TOKEN_SEP_LCURLY)
 	var enum int64
 	var ok bool
 	for {
-		if l.ConsumeIf(TOKEN_SEP_RCURLY) {
-			return
+		if p.l.ConsumeIf(TOKEN_SEP_RCURLY) {
+			break
 		}
-		if !l.Expect(TOKEN_IDENTIFIER) {
-			panic(l.Line())
+		if !p.l.Expect(TOKEN_IDENTIFIER) {
+			panic(p.l.Line())
 		}
-		stmt.Names = append(stmt.Names, l.NextToken().Content)
-		if l.ConsumeIf(TOKEN_OP_ASSIGN) {
-			if enum, ok = l.NextToken().Value.(int64); !ok {
-				panic(l.Line())
+		stmt.Names = append(stmt.Names, p.l.NextToken().Content)
+		if p.l.ConsumeIf(TOKEN_OP_ASSIGN) {
+			if enum, ok = p.l.NextToken().Value.(int64); !ok {
+				panic(p.l.Line())
 			}
 		}
 		stmt.Values = append(stmt.Values, enum)
 		enum++
-		if l.ConsumeIf(TOKEN_SEP_RCURLY) {
-			return
+		if p.l.ConsumeIf(TOKEN_SEP_RCURLY) {
+			break
 		}
-		if l.Expect(TOKEN_SEP_COMMA) || l.Expect(TOKEN_SEP_SEMI) {
-			l.NextToken()
-		}
-	}
-}
-
-func parseClassStmt(l *Lexer) (stmt *ast.ClassStmt) {
-	stmt = new(ast.ClassStmt)
-	l.NextToken()
-	stmt.Name = l.NextTokenKind(TOKEN_IDENTIFIER).Content
-	l.ConsumeIf(TOKEN_SEP_SEMI)
-	l.NextTokenKind(TOKEN_SEP_LCURLY)
-
-	for l.Expect(TOKEN_IDENTIFIER) {
-		attr := l.NextToken().Content
-		if l.Expect(TOKEN_SEP_LPAREN) {
-			stmt.AttrName = append(stmt.AttrName, attr)
-			stmt.AttrValue = append(stmt.AttrValue, &ast.FuncLiteralExp{parseFuncLiteral(l)})
-		} else if l.ConsumeIf(TOKEN_OP_ASSIGN) {
-			value := parseExp(l)
-			stmt.AttrName = append(stmt.AttrName, attr)
-			stmt.AttrValue = append(stmt.AttrValue, value)
-		}
-		if l.Expect(TOKEN_SEP_SEMI) || l.Expect(TOKEN_SEP_COMMA) {
-			l.NextToken()
+		if p.l.Expect(TOKEN_SEP_COMMA) || p.l.Expect(TOKEN_SEP_SEMI) {
+			p.l.NextToken()
 		}
 	}
-
-	l.NextTokenKind(TOKEN_SEP_RCURLY)
+	p.EnumStmts = append(p.EnumStmts, stmt)
 	return
 }
 
-func parseClassBody(l *Lexer) (attr string, value ast.Exp) {
-	attr = l.NextToken().Content
-	if l.ConsumeIf(TOKEN_OP_ASSIGN) {
-		value = parseExp(l)
+func (p *Parser) parseClassStmt() (stmt *ast.ClassStmt) {
+	stmt = new(ast.ClassStmt)
+	p.l.NextToken()
+	stmt.Name = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.l.NextTokenKind(TOKEN_SEP_LCURLY)
+
+	for p.l.Expect(TOKEN_IDENTIFIER) {
+		attr := p.l.NextToken().Content
+		if p.l.Expect(TOKEN_SEP_LPAREN) {
+			stmt.AttrName = append(stmt.AttrName, attr)
+			stmt.AttrValue = append(stmt.AttrValue, &ast.FuncLiteralExp{p.parseFuncLiteral()})
+		} else if p.l.ConsumeIf(TOKEN_OP_ASSIGN) {
+			value := parseExp(p)
+			stmt.AttrName = append(stmt.AttrName, attr)
+			stmt.AttrValue = append(stmt.AttrValue, value)
+		}
+		if p.l.Expect(TOKEN_SEP_SEMI) || p.l.Expect(TOKEN_SEP_COMMA) {
+			p.l.NextToken()
+		}
+	}
+
+	p.l.NextTokenKind(TOKEN_SEP_RCURLY)
+	p.ClassStmts = append(p.ClassStmts, stmt)
+	return
+}
+
+func (p *Parser) parseClassBody() (attr string, value ast.Exp) {
+	attr = p.l.NextToken().Content
+	if p.l.ConsumeIf(TOKEN_OP_ASSIGN) {
+		value = parseExp(p)
 	}
 	return
 }
 
 // single stmt to block
-func parseBlockStmt(l *Lexer) (stmt ast.Block) {
-	switch l.LookAhead().Kind {
+func (p *Parser) parseBlockStmt() (stmt ast.Block) {
+	switch p.l.LookAhead().Kind {
 	case TOKEN_SEP_LCURLY:
-		return parseBlock(l)
+		return p.parseBlock()
 	default:
-		stmt.Blocks = append(stmt.Blocks, parseStmt(l))
+		stmt.Blocks = append(stmt.Blocks, p.parseStmt())
 		return
 	}
 }
 
-func parseIfStmt(l *Lexer) (stmt ast.IfStmt) {
-	l.NextToken() // if
-	stmt.Conditions = append(stmt.Conditions, parseExpBlock(l))
-	l.ConsumeIf(TOKEN_SEP_SEMI)
-	stmt.Blocks = append(stmt.Blocks, parseBlockStmt(l)) // block | stmt
+func (p *Parser) parseIfStmt() (stmt *ast.IfStmt) {
+	stmt = new(ast.IfStmt)
+	p.l.NextToken() // if
+	stmt.Conditions = append(stmt.Conditions, p.parseExpBlock())
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	stmt.Blocks = append(stmt.Blocks, p.parseBlockStmt()) // block | stmt
 
-	for l.ConsumeIf(TOKEN_KW_ELIF) { // elif
-		stmt.Conditions = append(stmt.Conditions, parseExpBlock(l))
-		l.ConsumeIf(TOKEN_SEP_SEMI)
-		stmt.Blocks = append(stmt.Blocks, parseBlockStmt(l))
+	for p.l.ConsumeIf(TOKEN_KW_ELIF) { // elif
+		stmt.Conditions = append(stmt.Conditions, p.parseExpBlock())
+		p.l.ConsumeIf(TOKEN_SEP_SEMI)
+		stmt.Blocks = append(stmt.Blocks, p.parseBlockStmt())
 	}
 
 	// else ==> elif(true)
-	if l.ConsumeIf(TOKEN_KW_ELSE) { // else
+	if p.l.ConsumeIf(TOKEN_KW_ELSE) { // else
 		stmt.Conditions = append(stmt.Conditions, &ast.TrueExp{})
-		stmt.Blocks = append(stmt.Blocks, parseBlockStmt(l))
+		stmt.Blocks = append(stmt.Blocks, p.parseBlockStmt())
 	}
 
 	return
 }
 
 // (exp)
-func parseExpBlock(l *Lexer) (exp ast.Exp) {
-	l.NextTokenKind(TOKEN_SEP_LPAREN) // (
-	exp = parseExp(l)                 // condition
-	l.NextTokenKind(TOKEN_SEP_RPAREN) // )
+func (p *Parser) parseExpBlock() (exp ast.Exp) {
+	p.l.NextTokenKind(TOKEN_SEP_LPAREN) // (
+	exp = parseExp(p)                   // condition
+	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
 	return
 }
 
@@ -307,176 +320,181 @@ func _isAsignOp(kind int) bool {
 	return kind > TOKEN_ASIGN_START && kind < TOKEN_ASIGN_END
 }
 
-func parseVarAssignStmt(l *Lexer, prefix string) (stmt *ast.VarAssignStmt) {
-	return _parseAssignStmt(l, _parseVar(l, prefix))
+func (p *Parser) parseVarAssignStmt(prefix string) (stmt *ast.VarAssignStmt) {
+	return p._parseAssignStmt(p._parseVar(prefix))
 }
 
-func parseForStmt(l *Lexer) (stmt *ast.ForStmt) {
-	l.NextToken()
-	l.NextTokenKind(TOKEN_SEP_LPAREN) // (
-
+func (p *Parser) parseForStmt() (stmt *ast.ForStmt) {
 	stmt = new(ast.ForStmt)
-	switch l.LookAhead().Kind {
+	p.l.NextToken()
+	p.l.NextTokenKind(TOKEN_SEP_LPAREN) // (
+
+	switch p.l.LookAhead().Kind {
 	case TOKEN_KW_CONST, TOKEN_KW_LET:
-		stmt.DeclStmt = parseVarDeclStmt(l)
+		stmt.DeclStmt = p.parseVarDeclStmt()
 	case TOKEN_IDENTIFIER:
-		stmt.AsgnStmt = parseVarAssignStmt(l, l.NextToken().Content)
+		stmt.AsgnStmt = p.parseVarAssignStmt(p.l.NextToken().Content)
+	case TOKEN_SEP_SEMI:
+		break
 	default:
-		panic(l.Line())
+		panic(p.l.Line())
 	}
 
-	l.NextTokenKind(TOKEN_SEP_SEMI) // ;
-	stmt.Condition = parseExp(l)
-	l.NextTokenKind(TOKEN_SEP_SEMI) // ;
-	stmt.ForTail = parseForTail(l)
-	l.NextTokenKind(TOKEN_SEP_RPAREN) // )
-	l.ConsumeIf(TOKEN_SEP_SEMI)
-	stmt.Block = parseBlockStmt(l)
+	p.l.NextTokenKind(TOKEN_SEP_SEMI) // ;
+	if !p.l.Expect(TOKEN_SEP_SEMI) {
+		stmt.Condition = parseExp(p)
+	}
+	p.l.NextTokenKind(TOKEN_SEP_SEMI) // ;
+	if !p.l.Expect(TOKEN_SEP_RPAREN) {
+		stmt.ForTail = p.parseForTail()
+	}
+	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	stmt.Block = p.parseBlockStmt()
 	return
 }
 
 // forTail ::= varAssign | varIncOrDec | incOrDecVar
-func parseForTail(l *Lexer) *ast.VarAssignStmt {
-	if l.Expect(TOKEN_OP_INC) || l.Expect(TOKEN_OP_DEC) { // incOrDecVar
-		return parseIncOrDecVar(l)
+func (p *Parser) parseForTail() *ast.VarAssignStmt {
+	if p.l.Expect(TOKEN_OP_INC) || p.l.Expect(TOKEN_OP_DEC) { // incOrDecVar
+		return p.parseIncOrDecVar()
 	}
-	v := parseVar(l)
-	if l.Expect(TOKEN_OP_INC) || l.Expect(TOKEN_OP_DEC) { // varIncOrDec
-		return _incOrDec2Assign(l.NextToken().Kind, v)
+	v := p.parseVar()
+	if p.l.Expect(TOKEN_OP_INC) || p.l.Expect(TOKEN_OP_DEC) { // varIncOrDec
+		return _incOrDec2Assign(p.l.NextToken().Kind, v)
 	}
-	return _parseAssignStmt(l, v) // varAssign
+	return p._parseAssignStmt(v) // varAssign
 }
 
-func parseLoopStmt(l *Lexer) (stmt *ast.LoopStmt) {
-	l.NextToken()
-	l.NextTokenKind(TOKEN_SEP_LPAREN)
-	l.NextTokenKind(TOKEN_KW_LET)
+func (p *Parser) parseLoopStmt() (stmt *ast.LoopStmt) {
+	p.l.NextToken()
+	p.l.NextTokenKind(TOKEN_SEP_LPAREN)
+	p.l.NextTokenKind(TOKEN_KW_LET)
 
 	stmt = new(ast.LoopStmt)
-	firstName := l.NextTokenKind(TOKEN_IDENTIFIER).Content
-	if l.Expect(TOKEN_SEP_COMMA) {
+	firstName := p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
+	if p.l.ConsumeIf(TOKEN_SEP_COMMA) {
 		stmt.Key = firstName
-		l.NextToken()
-		stmt.Val = l.NextTokenKind(TOKEN_IDENTIFIER).Content
+		stmt.Val = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
 	} else {
 		stmt.Val = firstName
 	}
-	l.NextTokenKind(TOKEN_SEP_COLON) // :
+	p.l.NextTokenKind(TOKEN_SEP_COLON) // :
 
-	stmt.Iterator = parseExp(l)
+	stmt.Iterator = parseExp(p)
 
-	l.NextTokenKind(TOKEN_SEP_RPAREN) // )
-	l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
 
-	stmt.Block = parseBlockStmt(l)
+	stmt.Block = p.parseBlockStmt()
 
 	return
 }
 
-func parseWhileStmt(l *Lexer) (stmt *ast.WhileStmt) {
-	l.NextToken()
+func (p *Parser) parseWhileStmt() (stmt *ast.WhileStmt) {
+	p.l.NextToken()
 	stmt = new(ast.WhileStmt)
-	stmt.Condition = parseExpBlock(l)
-	l.ConsumeIf(TOKEN_SEP_SEMI)
-	stmt.Block = parseBlockStmt(l)
+	stmt.Condition = p.parseExpBlock()
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	stmt.Block = p.parseBlockStmt()
 	return
 }
 
-func parseFallthroughStmt(l *Lexer) (stmt ast.FallthroughStmt) {
-	l.NextToken()
-	return
+func (p *Parser) parseFallthroughStmt() (stmt *ast.FallthroughStmt) {
+	p.l.NextToken()
+	return new(ast.FallthroughStmt)
 }
 
-func parseGotoStmt(l *Lexer) (stmt ast.GotoStmt) {
-	l.NextToken()
-	if !l.Expect(TOKEN_IDENTIFIER) {
+func (p *Parser) parseGotoStmt() (stmt *ast.GotoStmt) {
+	p.l.NextToken()
+	if !p.l.Expect(TOKEN_IDENTIFIER) {
 		panic("")
 	}
-	stmt.Label = l.NextToken().Content
+	stmt = &ast.GotoStmt{Label: p.l.NextToken().Content}
 	return
 }
 
-func parseNameList(l *Lexer) (names []string) {
-	names = append(names, parseName(l))
-	for l.Expect(TOKEN_SEP_COMMA) {
-		l.NextToken()
-		names = append(names, parseName(l))
+func (p *Parser) parseNameList() (names []string) {
+	names = append(names, p.parseName())
+	for p.l.ConsumeIf(TOKEN_SEP_COMMA) {
+		names = append(names, p.parseName())
 	}
 	return names
 }
 
-func parseName(l *Lexer) string {
-	if !l.Expect(TOKEN_IDENTIFIER) {
-		panic(l.Line())
+func (p *Parser) parseName() string {
+	if !p.l.Expect(TOKEN_IDENTIFIER) {
+		panic(p.l.Line())
 	}
-	return l.NextToken().Content
+	return p.l.NextToken().Content
 }
 
 // stmt ::= func ID funcBody ';          			   	// function definition
 //	      | funcLiteral '(' [expList] ')' callTail ';'  // anonymous function call
-func parseFunc(l *Lexer) ast.Stmt {
-	l.NextToken() // func
-	switch l.LookAhead().Kind {
+func (p *Parser) parseFunc() ast.Stmt {
+	p.l.NextToken() // func
+	switch p.l.LookAhead().Kind {
 	case TOKEN_IDENTIFIER:
-		return parseFuncDefStmt(l)
+		return p.parseFuncDefStmt()
 	case TOKEN_SEP_LPAREN:
-		return parseAnonymousFuncCallStmt(l)
+		return p.parseAnonymousFuncCallStmt()
 	default:
-		panic(l.Line())
+		panic(p.l.Line())
 	}
 }
 
-func parseFuncDefStmt(l *Lexer) (stmt *ast.FuncDefStmt) {
+func (p *Parser) parseFuncDefStmt() (stmt *ast.FuncDefStmt) {
 	stmt = new(ast.FuncDefStmt)
-	stmt.Name = l.NextToken().Content
-	stmt.FuncLiteral = parseFuncLiteral(l)
+	stmt.Name = p.l.NextToken().Content
+	stmt.FuncLiteral = p.parseFuncLiteral()
+	p.FuncDefs = append(p.FuncDefs, stmt)
 	return
 }
 
-func parseFuncLiteral(l *Lexer) (literal ast.FuncLiteral) {
+func (p *Parser) parseFuncLiteral() (literal ast.FuncLiteral) {
 	var defaultValue bool
-	l.NextTokenKind(TOKEN_SEP_LPAREN) // (
+	p.l.NextTokenKind(TOKEN_SEP_LPAREN) // (
 
-	literal.Parameters, defaultValue = parseParameters(l)
+	literal.Parameters, defaultValue = p.parseParameters()
 
-	if l.ConsumeIf(TOKEN_SEP_VARARG) { // ...
+	if p.l.ConsumeIf(TOKEN_SEP_VARARG) { // ...
 		if defaultValue {
 			// TODO error
-			panic(l.Line())
+			panic(p.l.Line())
 		}
-		literal.VarArg = l.NextTokenKind(TOKEN_IDENTIFIER).Content
+		literal.VarArg = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
 	}
-	l.NextTokenKind(TOKEN_SEP_RPAREN) // )
+	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
 
-	literal.Block = parseBlock(l)
+	literal.Block = p.parseBlock()
 	return
 }
 
-func parseParameters(l *Lexer) (pars []ast.Parameter, defaultValue bool) {
-	for l.Expect(TOKEN_IDENTIFIER) {
+func (p *Parser) parseParameters() (pars []ast.Parameter, defaultValue bool) {
+	for p.l.Expect(TOKEN_IDENTIFIER) {
 		par := ast.Parameter{}
-		par.Name = l.NextToken().Content
-		if l.Expect(TOKEN_OP_ASSIGN) {
+		par.Name = p.l.NextToken().Content
+		if p.l.Expect(TOKEN_OP_ASSIGN) {
 			defaultValue = true
-			l.NextToken()
-			par.Default = parseExp(l)
+			p.l.NextToken()
+			par.Default = parseExp(p)
 		} else if defaultValue {
 			// TODO error
-			panic(l.Line())
+			panic(p.l.Line())
 		}
 		pars = append(pars, par)
-		if l.Expect(TOKEN_SEP_COMMA) {
-			l.NextToken()
+		if p.l.Expect(TOKEN_SEP_COMMA) {
+			p.l.NextToken()
 		}
 	}
 	return
 }
 
-func parseAnonymousFuncCallStmt(l *Lexer) (stmt *ast.AnonymousFuncCallStmt) {
+func (p *Parser) parseAnonymousFuncCallStmt() (stmt *ast.AnonymousFuncCallStmt) {
 	stmt = new(ast.AnonymousFuncCallStmt)
-	stmt.FuncLiteral = parseFuncLiteral(l)
-	stmt.CallArgs = parseExpListBlock(l)
-	stmt.CallTails = parseCallTails(l)
+	stmt.FuncLiteral = p.parseFuncLiteral()
+	stmt.CallArgs = parseExpListBlock(p)
+	stmt.CallTails = p.parseCallTails()
 	return
 }
 
@@ -485,32 +503,32 @@ func expectTail(token *Token) bool {
 	return token.Kind == TOKEN_SEP_DOT || token.Kind == TOKEN_SEP_LBRACK || token.Kind == TOKEN_SEP_LPAREN
 }
 
-func parseCallTails(l *Lexer) (tails []ast.CallTail) {
-	for expectTail(l.LookAhead()) {
+func (p *Parser) parseCallTails() (tails []ast.CallTail) {
+	for expectTail(p.l.LookAhead()) {
 		var tail ast.CallTail
-		tail.Attrs = parseAttrTail(l)
-		tail.Args = parseExpListBlock(l)
+		tail.Attrs = p.parseAttrTail()
+		tail.Args = parseExpListBlock(p)
 		tails = append(tails, tail)
 	}
 	return
 }
 
-func parseBreakStmt(l *Lexer) (stmt ast.BreakStmt) {
-	l.NextToken()
-	return
+func (p *Parser) parseBreakStmt() (stmt *ast.BreakStmt) {
+	p.l.NextToken()
+	return new(ast.BreakStmt)
 }
 
-func parseContinueStmt(l *Lexer) (stmt ast.ContinueStmt) {
-	l.NextToken()
-	return
+func (p *Parser) parseContinueStmt() (stmt *ast.ContinueStmt) {
+	p.l.NextToken()
+	return new(ast.ContinueStmt)
 }
 
-func parseReturnStmt(l *Lexer) (stmt *ast.ReturnStmt) {
+func (p *Parser) parseReturnStmt() (stmt *ast.ReturnStmt) {
 	stmt = new(ast.ReturnStmt)
-	l.NextToken()
-	if l.Expect(TOKEN_SEP_RCURLY) || l.Expect(TOKEN_SEP_SEMI) {
+	p.l.NextToken()
+	if p.l.Expect(TOKEN_SEP_RCURLY) || p.l.Expect(TOKEN_SEP_SEMI) {
 		return
 	}
-	stmt.Args = parseExpList(l)
+	stmt.Args = parseExpList(p)
 	return
 }

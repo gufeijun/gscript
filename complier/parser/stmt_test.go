@@ -10,20 +10,20 @@ import (
 func TestVarDeclStmt(t *testing.T) {
 	srcs := []string{
 		`let a="a"+"b";`,
-		`let a:=1;`,
-		`const a,b`,
+		`let a;`,
+		`const a,b = 1,2`,
 		`let a,b = 1+1,1+2`,
 		`let a,b,c = true,1+2,"good";`,
 	}
 	wants := []*VarDeclStmt{
-		{false, false, []string{"a"}, []Exp{&BinOpExp{BINOP_ADD, &StringLiteralExp{"a"}, &StringLiteralExp{"b"}}}},
-		{false, true, []string{"a"}, []Exp{&NumberLiteralExp{int64(1)}}},
-		{true, false, []string{"a", "b"}, []Exp{&NilExp{}, &NilExp{}}},
-		{false, false, []string{"a", "b"}, []Exp{
+		{false, []string{"a"}, []Exp{&BinOpExp{BINOP_ADD, &StringLiteralExp{"a"}, &StringLiteralExp{"b"}}}},
+		{false, []string{"a"}, []Exp{&NilExp{}}},
+		{true, []string{"a", "b"}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
+		{false, []string{"a", "b"}, []Exp{
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(1)}},
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
 		}},
-		{false, false, []string{"a", "b", "c"}, []Exp{
+		{false, []string{"a", "b", "c"}, []Exp{
 			&TrueExp{},
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
 			&StringLiteralExp{"good"},
@@ -31,7 +31,7 @@ func TestVarDeclStmt(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseVarDeclStmt(l)
+		stmt := NewParser(l).parseVarDeclStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseVarDeclStmt failed: \n%s\n", src)
 		}
@@ -65,7 +65,7 @@ func TestVarAssignStmt(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseVarOpOrLabel(l)
+		stmt := NewParser(l).parseVarOpOrLabel()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseVarAssignStmt failed: \n%s\n", src)
 		}
@@ -86,7 +86,7 @@ func TestVarIncOrDecStmt(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseVarOpOrLabel(l)
+		stmt := NewParser(l).parseVarOpOrLabel()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseVarIncOrDecStmt failed: \n%s\n", src)
 		}
@@ -98,7 +98,7 @@ func TestLabelStmt(t *testing.T) {
 	want := &LabelStmt{"loop"}
 
 	l := newLexer(src)
-	stmt := parseVarOpOrLabel(l)
+	stmt := NewParser(l).parseVarOpOrLabel()
 	if !reflect.DeepEqual(stmt, want) {
 		t.Fatalf("parseLabelStmt failed: \n%s\n", src)
 	}
@@ -128,7 +128,7 @@ func TestFuncCallStmt(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseVarOpOrLabel(l)
+		stmt := NewParser(l).parseVarOpOrLabel()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseFuncCallStmt failed: \n%s\n", src)
 		}
@@ -157,8 +157,8 @@ func A(a=1,b="good"){
 			Parameters: []Parameter{{"a", nil}, {"b", &NumberLiteralExp{int64(1)}}},
 			VarArg:     "",
 			Block: Block{Blocks: []BlockStmt{
-				parseVarDeclStmt(newLexer("let a=b;")),
-				parseVarOpOrLabel(newLexer("print(a)")),
+				NewParser(newLexer("let a=b;")).parseVarDeclStmt(),
+				NewParser(newLexer("print(a)")).parseVarOpOrLabel(),
 			}},
 		}},
 		{"A", FuncLiteral{
@@ -177,7 +177,7 @@ func A(a=1,b="good"){
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseFunc(l)
+		stmt := NewParser(l).parseFunc()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseFuncDefStmt failed: \n%s\n", src)
 		}
@@ -218,7 +218,7 @@ func(num){
 				Parameters: []Parameter{{"num", nil}},
 				Block: Block{[]BlockStmt{&ReturnStmt{Args: []Exp{&MapLiteralExp{
 					Keys: []interface{}{"show"},
-					Vals: []Exp{parseFuncLiteralExp(newLexer("func(){print(num)}"))},
+					Vals: []Exp{parseFuncLiteralExp(NewParser(newLexer("func(){print(num)}")))},
 				}}}}}},
 			CallArgs:  []Exp{&NumberLiteralExp{int64(1)}},
 			CallTails: []CallTail{{[]Exp{&StringLiteralExp{"show"}}, nil}},
@@ -228,16 +228,16 @@ func(num){
 				Parameters: []Parameter{{"num", nil}},
 				Block: Block{[]BlockStmt{&ReturnStmt{[]Exp{&MapLiteralExp{
 					Keys: []interface{}{"show"},
-					Vals: []Exp{parseFuncLiteralExp(newLexer("func(){print(num)}"))},
+					Vals: []Exp{parseFuncLiteralExp(NewParser(newLexer("func(){print(num)}")))},
 				}}}}}},
 			CallArgs: []Exp{&NumberLiteralExp{int64(1)}},
 			CallTails: []CallTail{
-				{[]Exp{parseFuncCallOrAttrExp(newLexer(`echo("show")`))}, nil}},
+				{[]Exp{parseFuncCallOrAttrExp(NewParser(newLexer(`echo("show")`)))}, nil}},
 		},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseFunc(l)
+		stmt := NewParser(l).parseFunc()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseAnonymousFuncCallStmt failed: \n%s\n", src)
 		}
@@ -258,7 +258,7 @@ func TestIncOrDecVarStmt(t *testing.T) {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseIncOrDecVar(l)
+		stmt := NewParser(l).parseIncOrDecVar()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseIncOrDecVarStmt failed: \n%s\n", src)
 		}
@@ -277,7 +277,7 @@ enum {
 }
 `,
 	}
-	wants := []EnumStmt{
+	wants := []*EnumStmt{
 		{nil, nil},
 		{
 			[]string{"a", "b", "c", "d", "e", "f", "g"},
@@ -286,7 +286,7 @@ enum {
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseEnumStmt(l)
+		stmt := NewParser(l).parseEnumStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseEnumStmt failed: \n%s\n", src)
 		}
@@ -323,20 +323,20 @@ default:
 			Value: &NameExp{"a"},
 			Cases: [][]Exp{{&NumberLiteralExp{int64(1)}}, {&NumberLiteralExp{int64(2)}, &NumberLiteralExp{int64(3)}}},
 			Blocks: [][]BlockStmt{
-				{parseVarOpOrLabel(newLexer("i++")), parseVarDeclStmt(newLexer("let b,c = 1,2"))},
-				{parseVarOpOrLabel(newLexer("i--")), parseVarOpOrLabel(newLexer("call(a,b)"))},
+				{NewParser(newLexer("i++")).parseVarOpOrLabel(), NewParser(newLexer("let b,c = 1,2")).parseVarDeclStmt()},
+				{NewParser(newLexer("i--")).parseVarOpOrLabel(), NewParser(newLexer("call(a,b)")).parseVarOpOrLabel()},
 			},
 		},
 		{
 			Value:   &NameExp{"a"},
 			Cases:   [][]Exp{{&StringLiteralExp{"hello"}}},
-			Blocks:  [][]BlockStmt{{parseIncOrDecVar(newLexer("++i"))}},
-			Default: []BlockStmt{parseIncOrDecVar(newLexer("--i"))},
+			Blocks:  [][]BlockStmt{{NewParser(newLexer("++i")).parseIncOrDecVar()}},
+			Default: []BlockStmt{NewParser(newLexer("--i")).parseIncOrDecVar()},
 		},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseSwitchStmt(l)
+		stmt := NewParser(l).parseSwitchStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseSwitchStmt failed: \n%s\n", src)
 		}
@@ -360,19 +360,19 @@ loop(let k,v:arr){
 `,
 	}
 	wants := []*LoopStmt{
-		{"", "v", parseExp(newLexer(`m["arr"]`)), Block{
-			[]BlockStmt{parseVarOpOrLabel(newLexer("print(v)"))},
+		{"", "v", parseExp(NewParser(newLexer(`m["arr"]`))), Block{
+			[]BlockStmt{NewParser(newLexer("print(v)")).parseVarOpOrLabel()},
 		}},
-		{"k", "v", parseExp(newLexer("arr")), Block{
-			[]BlockStmt{parseVarOpOrLabel(newLexer("print(k,v)"))},
+		{"k", "v", parseExp(NewParser(newLexer("arr"))), Block{
+			[]BlockStmt{NewParser(newLexer("print(k,v)")).parseVarOpOrLabel()},
 		}},
-		{"k", "v", parseExp(newLexer("arr")), Block{
-			[]BlockStmt{parseVarOpOrLabel(newLexer("print(k,v)"))},
+		{"k", "v", parseExp(NewParser(newLexer("arr"))), Block{
+			[]BlockStmt{NewParser(newLexer("print(k,v)")).parseVarOpOrLabel()},
 		}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseLoopStmt(l)
+		stmt := NewParser(l).parseLoopStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseLoopStmt failed: \n%s\n", src)
 		}
@@ -396,15 +396,15 @@ while(i--)
 	wants := []*WhileStmt{
 		{&NumberLiteralExp{int64(1)}, Block{
 			[]BlockStmt{
-				parseVarDeclStmt(newLexer("let conn = accept(listener)")),
-				parseVarOpOrLabel(newLexer("thread(handleConn,conn)")),
+				NewParser(newLexer("let conn = accept(listener)")).parseVarDeclStmt(),
+				NewParser(newLexer("thread(handleConn,conn)")).parseVarOpOrLabel(),
 			},
 		}},
-		{parseExp(newLexer("i--")), Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(i)"))}}},
+		{parseExp(NewParser(newLexer("i--"))), Block{[]BlockStmt{NewParser(newLexer("print(i)")).parseVarOpOrLabel()}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseWhileStmt(l)
+		stmt := NewParser(l).parseWhileStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseWhileStmt failed: \n%s\n", src)
 		}
@@ -424,17 +424,19 @@ for(i=0;i<10;i++)
 `,
 	}
 	wants := []*ForStmt{
-		{nil, parseVarDeclStmt(newLexer("let low,high=0,len(arr)-1")), parseExp(newLexer("low<high")),
-			parseVarOpOrLabel(newLexer("low,high = low+1,high-1")).(*VarAssignStmt),
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("arr[low],arr[high]=arr[high],arr[low]"))}},
+		{nil, NewParser(newLexer("let low,high=0,len(arr)-1")).parseVarDeclStmt(),
+			parseExp(NewParser(newLexer("low<high"))),
+			NewParser(newLexer("low,high = low+1,high-1")).parseVarOpOrLabel().(*VarAssignStmt),
+			Block{[]BlockStmt{NewParser(newLexer("arr[low],arr[high]=arr[high],arr[low]")).parseVarOpOrLabel()}},
 		},
-		{parseVarOpOrLabel(newLexer("i=0")).(*VarAssignStmt), nil, parseExp(newLexer("i<10")), parseVarOpOrLabel(newLexer("i++")).(*VarAssignStmt),
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(i)"))}},
+		{NewParser(newLexer("i=0")).parseVarOpOrLabel().(*VarAssignStmt), nil,
+			parseExp(NewParser(newLexer("i<10"))), NewParser(newLexer("i++")).parseVarOpOrLabel().(*VarAssignStmt),
+			Block{[]BlockStmt{NewParser(newLexer("print(i)")).parseVarOpOrLabel()}},
 		},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseForStmt(l)
+		stmt := NewParser(l).parseForStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseForStmt failed: \n%s\n", src)
 		}
@@ -461,26 +463,26 @@ if(a) print(1)
 else print(2)
 `,
 	}
-	wants := []IfStmt{
+	wants := []*IfStmt{
 		{[]Exp{&NameExp{"a"}}, []Block{
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(true)"))}},
+			Block{[]BlockStmt{NewParser(newLexer("print(true)")).parseVarOpOrLabel()}},
 		}},
 		{[]Exp{&NameExp{"a"}}, []Block{
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(true)"))}},
+			Block{[]BlockStmt{NewParser(newLexer("print(true)")).parseVarOpOrLabel()}},
 		}},
 		{[]Exp{&NameExp{"a"}, &NameExp{"b"}, &NameExp{"c"}}, []Block{
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(1)"))}},
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(2)"))}},
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(3)"))}},
+			Block{[]BlockStmt{NewParser(newLexer("print(1)")).parseVarOpOrLabel()}},
+			Block{[]BlockStmt{NewParser(newLexer("print(2)")).parseVarOpOrLabel()}},
+			Block{[]BlockStmt{NewParser(newLexer("print(3)")).parseVarOpOrLabel()}},
 		}},
 		{[]Exp{&NameExp{"a"}, &TrueExp{}}, []Block{
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(1)"))}},
-			Block{[]BlockStmt{parseVarOpOrLabel(newLexer("print(2)"))}},
+			Block{[]BlockStmt{NewParser(newLexer("print(1)")).parseVarOpOrLabel()}},
+			Block{[]BlockStmt{NewParser(newLexer("print(2)")).parseVarOpOrLabel()}},
 		}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseIfStmt(l)
+		stmt := NewParser(l).parseIfStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseIfStmt failed: \n%s\n", src)
 		}
@@ -507,7 +509,7 @@ return {a:1,b:2};
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseReturnStmt(l)
+		stmt := NewParser(l).parseReturnStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseReturnStmt failed: \n%s\n", src)
 		}
@@ -532,12 +534,12 @@ class A{
 	wants := []*ClassStmt{
 		// {"A", nil, nil},
 		{"A", []string{"__self", "name", "show"}, []Exp{&FuncLiteralExp{
-			FuncLiteral{nil, "", Block{[]BlockStmt{parseVarOpOrLabel(newLexer("this.age = 10"))}}}},
+			FuncLiteral{nil, "", Block{[]BlockStmt{NewParser(newLexer("this.age = 10")).parseVarOpOrLabel()}}}},
 			&StringLiteralExp{"jack"}, &FuncLiteralExp{FuncLiteral{nil, "", Block{}}}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		stmt := parseClassStmt(l)
+		stmt := NewParser(l).parseClassStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseReturnStmt failed: \n%s\n", src)
 		}

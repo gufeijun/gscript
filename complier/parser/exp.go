@@ -36,83 +36,83 @@ factor ::= '(' exp ')' | literal | nil | new ID ['(' [expList] ')']
 */
 
 // '(' [explist] ')
-func parseExpListBlock(l *Lexer) []ast.Exp {
-	l.NextTokenKind(TOKEN_SEP_LPAREN)
-	if l.Expect(TOKEN_SEP_RPAREN) {
-		l.NextToken()
+func parseExpListBlock(p *Parser) []ast.Exp {
+	p.l.NextTokenKind(TOKEN_SEP_LPAREN)
+	if p.l.Expect(TOKEN_SEP_RPAREN) {
+		p.l.NextToken()
 		return nil
 	}
-	exps := parseExpList(l)
-	l.NextTokenKind(TOKEN_SEP_RPAREN)
+	exps := parseExpList(p)
+	p.l.NextTokenKind(TOKEN_SEP_RPAREN)
 	return exps
 }
 
-func parseExpList(l *Lexer) (exps []ast.Exp) {
-	exps = append(exps, parseExp(l))
-	for l.Expect(TOKEN_SEP_COMMA) {
-		l.NextToken()
-		exps = append(exps, parseExp(l))
+func parseExpList(p *Parser) (exps []ast.Exp) {
+	exps = append(exps, parseExp(p))
+	for p.l.Expect(TOKEN_SEP_COMMA) {
+		p.l.NextToken()
+		exps = append(exps, parseExp(p))
 	}
 	return
 }
 
-func parseExp(l *Lexer) ast.Exp {
-	return parseTerm12(l)
+func parseExp(p *Parser) ast.Exp {
+	return parseTerm12(p)
 }
 
-func parseTerm12(l *Lexer) ast.Exp {
-	exp1 := parseTerm11(l)
-	if !l.Expect(TOKEN_SEP_QMARK) { // ?
+func parseTerm12(p *Parser) ast.Exp {
+	exp1 := parseTerm11(p)
+	if !p.l.Expect(TOKEN_SEP_QMARK) { // ?
 		return exp1
 	}
-	l.NextToken()
-	exp2 := parseTerm11(l)
-	l.NextTokenKind(TOKEN_SEP_COLON) // :
-	return &ast.TernaryOpExp{exp1, exp2, parseTerm11(l)}
+	p.l.NextToken()
+	exp2 := parseTerm11(p)
+	p.l.NextTokenKind(TOKEN_SEP_COLON) // :
+	return &ast.TernaryOpExp{exp1, exp2, parseTerm11(p)}
 }
 
-func parseTerm11(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_LOR}, parseTerm10)
+func parseTerm11(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_LOR}, parseTerm10)
 }
 
-func parseTerm10(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_LAND}, parseTerm9)
+func parseTerm10(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_LAND}, parseTerm9)
 }
 
-func parseTerm9(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_OR}, parseTerm8)
+func parseTerm9(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_OR}, parseTerm8)
 }
 
-func parseTerm8(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_XOR}, parseTerm7)
+func parseTerm8(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_XOR}, parseTerm7)
 }
 
-func parseTerm7(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_AND}, parseTerm6)
+func parseTerm7(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_AND}, parseTerm6)
 }
 
-func parseTerm6(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_EQ, TOKEN_OP_NE}, parseTerm5)
+func parseTerm6(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_EQ, TOKEN_OP_NE}, parseTerm5)
 }
 
-func parseTerm5(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_LE, TOKEN_OP_GE, TOKEN_OP_LT, TOKEN_OP_GT}, parseTerm4)
+func parseTerm5(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_LE, TOKEN_OP_GE, TOKEN_OP_LT, TOKEN_OP_GT}, parseTerm4)
 }
 
-func parseTerm4(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_SHL, TOKEN_OP_SHR}, parseTerm3)
+func parseTerm4(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_SHL, TOKEN_OP_SHR}, parseTerm3)
 }
 
-func parseTerm3(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_ADD, TOKEN_OP_SUB}, parseTerm2)
+func parseTerm3(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_ADD, TOKEN_OP_SUB}, parseTerm2)
 }
 
-func parseTerm2(l *Lexer) ast.Exp {
-	return _parseBinExp(l, []int{TOKEN_OP_DIV, TOKEN_OP_MUL, TOKEN_OP_MOD, TOKEN_OP_IDIV}, parseTerm1)
+func parseTerm2(p *Parser) ast.Exp {
+	return _parseBinExp(p, []int{TOKEN_OP_DIV, TOKEN_OP_MUL, TOKEN_OP_MOD, TOKEN_OP_IDIV}, parseTerm1)
 }
 
-func parseTerm1(l *Lexer) ast.Exp {
-	kind := l.LookAhead().Kind
+func parseTerm1(p *Parser) ast.Exp {
+	kind := p.l.LookAhead().Kind
 
 	var unOp int
 	if kind == TOKEN_OP_SUB {
@@ -122,26 +122,26 @@ func parseTerm1(l *Lexer) ast.Exp {
 	} else if kind == TOKEN_OP_LNOT {
 		unOp = ast.UNOP_LNOT
 	} else {
-		return parseTerm0(l)
+		return parseTerm0(p)
 	}
-	l.NextToken()
-	return &ast.UnOpExp{Op: unOp, Exp: parseTerm1(l)}
+	p.l.NextToken()
+	return &ast.UnOpExp{Op: unOp, Exp: parseTerm1(p)}
 }
 
-func parseTerm0(l *Lexer) ast.Exp {
-	if l.Expect(TOKEN_OP_INC) {
-		l.NextToken()
-		return &ast.UnOpExp{ast.UNOP_INC, parseFactor(l)}
-	} else if l.Expect(TOKEN_OP_DEC) {
-		l.NextToken()
-		return &ast.UnOpExp{ast.UNOP_DEC, parseFactor(l)}
+func parseTerm0(p *Parser) ast.Exp {
+	if p.l.Expect(TOKEN_OP_INC) {
+		p.l.NextToken()
+		return &ast.UnOpExp{ast.UNOP_INC, parseFactor(p)}
+	} else if p.l.Expect(TOKEN_OP_DEC) {
+		p.l.NextToken()
+		return &ast.UnOpExp{ast.UNOP_DEC, parseFactor(p)}
 	}
-	exp := parseFactor(l)
-	if l.Expect(TOKEN_OP_INC) {
-		l.NextToken()
+	exp := parseFactor(p)
+	if p.l.Expect(TOKEN_OP_INC) {
+		p.l.NextToken()
 		return &ast.UnOpExp{ast.UNOP_INC_, exp}
-	} else if l.Expect(TOKEN_OP_DEC) {
-		l.NextToken()
+	} else if p.l.Expect(TOKEN_OP_DEC) {
+		p.l.NextToken()
 		return &ast.UnOpExp{ast.UNOP_DEC_, exp}
 	}
 	return exp
@@ -149,163 +149,159 @@ func parseTerm0(l *Lexer) ast.Exp {
 
 // factor ::= '(' exp ')' | literal | nil | new ID ['(' [expList] ')']
 // 		 | ID { ( '.' ID | '[' exp ']' | '(' [expList] ')' ) }
-func parseFactor(l *Lexer) ast.Exp {
-	switch l.LookAhead().Kind {
+func parseFactor(p *Parser) ast.Exp {
+	switch p.l.LookAhead().Kind {
 	case TOKEN_STRING:
-		return parseStringLiteralExp(l)
+		return parseStringLiteralExp(p)
 	case TOKEN_NUMBER:
-		return parseNumberLiteralExp(l)
+		return parseNumberLiteralExp(p)
 	case TOKEN_SEP_LCURLY: // mapLiteral
-		return parseMapLiteralExp(l)
+		return parseMapLiteralExp(p)
 	case TOKEN_SEP_LBRACK: // arrLiteral
-		return parseArrLiteralExp(l)
+		return parseArrLiteralExp(p)
 	case TOKEN_KW_TRUE:
-		return parseTrueExp(l)
+		return parseTrueExp(p)
 	case TOKEN_KW_FALSE:
-		return parseFalseExp(l)
+		return parseFalseExp(p)
 	case TOKEN_KW_NIL:
-		return parseNilExp(l)
+		return parseNilExp(p)
 	case TOKEN_KW_FUNC:
-		return parseFuncLiteralExp(l)
+		return parseFuncLiteralExp(p)
 	case TOKEN_KW_NEW:
-		return parseNewObjectExp(l)
+		return parseNewObjectExp(p)
 	case TOKEN_IDENTIFIER:
-		return parseFuncCallOrAttrExp(l)
+		return parseFuncCallOrAttrExp(p)
 	case TOKEN_SEP_LPAREN: // (exp)
-		l.NextToken()
-		exp := parseExp(l)
-		l.NextTokenKind(TOKEN_SEP_RPAREN)
+		p.l.NextToken()
+		exp := parseExp(p)
+		p.l.NextTokenKind(TOKEN_SEP_RPAREN)
 		return exp
 	default:
-		panic(l.Line())
+		panic(p.l.Line())
 	}
 }
 
-func parseFuncLiteralExp(l *Lexer) *ast.FuncLiteralExp {
-	l.NextToken()
-	return &ast.FuncLiteralExp{parseFuncLiteral(l)}
+func parseFuncLiteralExp(p *Parser) *ast.FuncLiteralExp {
+	p.l.NextToken()
+	return &ast.FuncLiteralExp{p.parseFuncLiteral()}
 }
 
-func parseNilExp(l *Lexer) *ast.NilExp {
-	l.NextToken()
+func parseNilExp(p *Parser) *ast.NilExp {
+	p.l.NextToken()
 	return &ast.NilExp{}
 }
 
-func parseFalseExp(l *Lexer) *ast.FalseExp {
-	l.NextToken()
+func parseFalseExp(p *Parser) *ast.FalseExp {
+	p.l.NextToken()
 	return &ast.FalseExp{}
 }
 
-func parseTrueExp(l *Lexer) *ast.TrueExp {
-	l.NextToken()
+func parseTrueExp(p *Parser) *ast.TrueExp {
+	p.l.NextToken()
 	return &ast.TrueExp{}
 }
 
-func parseNumberLiteralExp(l *Lexer) *ast.NumberLiteralExp {
-	return &ast.NumberLiteralExp{l.NextToken().Value}
+func parseNumberLiteralExp(p *Parser) *ast.NumberLiteralExp {
+	return &ast.NumberLiteralExp{p.l.NextToken().Value}
 }
 
-func parseStringLiteralExp(l *Lexer) *ast.StringLiteralExp {
-	return &ast.StringLiteralExp{l.NextToken().Value.(string)}
+func parseStringLiteralExp(p *Parser) *ast.StringLiteralExp {
+	return &ast.StringLiteralExp{p.l.NextToken().Value.(string)}
 }
 
-func parseFuncCallOrAttrExp(l *Lexer) ast.Exp {
+func parseFuncCallOrAttrExp(p *Parser) ast.Exp {
 	var exp ast.Exp
-	exp = &ast.NameExp{l.NextToken().Content}
+	exp = &ast.NameExp{p.l.NextToken().Content}
 	for {
-		switch l.LookAhead().Kind {
+		switch p.l.LookAhead().Kind {
 		case TOKEN_SEP_DOT: // access attribute
-			l.NextToken()
+			p.l.NextToken()
 			exp = &ast.BinOpExp{
 				Exp1:  exp,
-				Exp2:  &ast.StringLiteralExp{l.NextTokenKind(TOKEN_IDENTIFIER).Content},
+				Exp2:  &ast.StringLiteralExp{p.l.NextTokenKind(TOKEN_IDENTIFIER).Content},
 				BinOp: ast.BINOP_ATTR,
 			}
 		case TOKEN_SEP_LBRACK: // access map
-			l.NextToken()
+			p.l.NextToken()
 			exp = &ast.BinOpExp{
 				Exp1:  exp,
-				Exp2:  parseExp(l),
+				Exp2:  parseExp(p),
 				BinOp: ast.BINOP_ATTR,
 			}
-			l.NextTokenKind(TOKEN_SEP_RBRACK)
+			p.l.NextTokenKind(TOKEN_SEP_RBRACK)
 		case TOKEN_SEP_LPAREN: // function call
-			exp = &ast.FuncCallExp{exp, parseExpListBlock(l)}
+			exp = &ast.FuncCallExp{exp, parseExpListBlock(p)}
 		default:
 			return exp
 		}
 	}
 }
 
-func parseNewObjectExp(l *Lexer) *ast.NewObjectExp {
-	l.NextToken()
+func parseNewObjectExp(p *Parser) *ast.NewObjectExp {
+	p.l.NextToken()
 	exp := &ast.NewObjectExp{}
-	exp.Name = l.NextTokenKind(TOKEN_IDENTIFIER).Content
-	if !l.Expect(TOKEN_SEP_LPAREN) {
+	exp.Name = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
+	if !p.l.Expect(TOKEN_SEP_LPAREN) {
 		return exp
 	}
-	exp.Args = parseExpListBlock(l)
+	exp.Args = parseExpListBlock(p)
 	return exp
 }
 
-func parseArrLiteralExp(l *Lexer) *ast.ArrLiteralExp {
-	l.NextToken()
+func parseArrLiteralExp(p *Parser) *ast.ArrLiteralExp {
+	p.l.NextToken()
 	exp := &ast.ArrLiteralExp{}
-	for !l.Expect(TOKEN_SEP_RBRACK) {
-		exp.Vals = append(exp.Vals, parseExp(l))
-		if l.Expect(TOKEN_SEP_COMMA) || l.Expect(TOKEN_SEP_SEMI) {
-			l.NextToken()
+	for !p.l.Expect(TOKEN_SEP_RBRACK) {
+		exp.Vals = append(exp.Vals, parseExp(p))
+		if p.l.Expect(TOKEN_SEP_COMMA) || p.l.Expect(TOKEN_SEP_SEMI) {
+			p.l.NextToken()
 		}
 	}
-	l.NextTokenKind(TOKEN_SEP_RBRACK)
+	p.l.NextTokenKind(TOKEN_SEP_RBRACK)
 	return exp
 }
 
-func parseMapLiteralExp(l *Lexer) *ast.MapLiteralExp {
-	l.NextToken()
+func parseMapLiteralExp(p *Parser) *ast.MapLiteralExp {
+	p.l.NextToken()
 	exp := &ast.MapLiteralExp{}
 loop:
 	for {
 		var key interface{}
-		switch l.LookAhead().Kind {
+		switch p.l.LookAhead().Kind {
 		case TOKEN_KW_TRUE:
 			key = true
 		case TOKEN_KW_FALSE:
 			key = false
 		case TOKEN_STRING, TOKEN_NUMBER:
-			key = l.LookAhead().Value
+			key = p.l.LookAhead().Value
 		case TOKEN_IDENTIFIER:
-			key = l.LookAhead().Content
+			key = p.l.LookAhead().Content
 		default:
 			break loop
 		}
-		l.NextToken()
+		p.l.NextToken()
 		exp.Keys = append(exp.Keys, key)
 
 		var val ast.Exp
-		if l.Expect(TOKEN_SEP_COLON) {
-			l.NextToken()
-			val = parseExp(l)
-		} else {
-			val = &ast.NilExp{}
-		}
+		p.l.NextTokenKind(TOKEN_SEP_COLON)
+		val = parseExp(p)
 		exp.Vals = append(exp.Vals, val)
-		if l.Expect(TOKEN_SEP_COMMA) || l.Expect(TOKEN_SEP_SEMI) {
-			l.NextToken()
-		} else if !l.Expect(TOKEN_SEP_RCURLY) {
-			panic(l.Line())
+		if p.l.Expect(TOKEN_SEP_COMMA) || p.l.Expect(TOKEN_SEP_SEMI) {
+			p.l.NextToken()
+		} else if !p.l.Expect(TOKEN_SEP_RCURLY) {
+			panic(p.l.Line())
 		}
 	}
-	l.NextTokenKind(TOKEN_SEP_RCURLY)
+	p.l.NextTokenKind(TOKEN_SEP_RCURLY)
 	return exp
 }
 
-func _parseBinExp(l *Lexer, expect []int, cb func(*Lexer) ast.Exp) ast.Exp {
-	exp := cb(l)
+func _parseBinExp(p *Parser, expect []int, cb func(*Parser) ast.Exp) ast.Exp {
+	exp := cb(p)
 	for {
 		flag := func() bool {
 			for _, kind := range expect {
-				if l.Expect(kind) {
+				if p.l.Expect(kind) {
 					return true
 				}
 			}
@@ -316,8 +312,8 @@ func _parseBinExp(l *Lexer, expect []int, cb func(*Lexer) ast.Exp) ast.Exp {
 		}
 		binExp := &ast.BinOpExp{
 			Exp1:  exp,
-			BinOp: l.NextToken().Kind,
-			Exp2:  cb(l),
+			BinOp: p.l.NextToken().Kind,
+			Exp2:  cb(p),
 		}
 		exp = binExp
 	}

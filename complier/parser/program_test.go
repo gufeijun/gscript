@@ -23,7 +23,7 @@ import "../crawler",socks as craw,s`,
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
-		imports := parseImports(l)
+		imports := NewParser(l).parseImports()
 		if !reflect.DeepEqual(imports, wants[i]) {
 			t.Fatalf("parseImports failed:\n%s\n", src)
 		}
