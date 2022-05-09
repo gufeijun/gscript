@@ -120,9 +120,7 @@ func genFuncCallStmt(stmt *ast.NamedFuncCallStmt, ctx *Context) {
 			wantRetCnt = 1
 		}
 
-		for _, arg := range callTail.Args {
-			genExp(arg, ctx, 1) // arguments
-		}
+		genExps(callTail.Args, ctx, len(callTail.Args))
 
 		// function
 		if i == 0 {

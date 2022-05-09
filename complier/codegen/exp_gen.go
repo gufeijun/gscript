@@ -12,6 +12,7 @@ func genExps(exps []ast.Exp, ctx *Context, wantCnt int) {
 		for i := 0; i < wantCnt; i++ {
 			ctx.insLoadConst(nil)
 		}
+		return
 	}
 	last := len(exps) - 1
 	for i := 0; i < last; i++ {
@@ -60,13 +61,20 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 		genTernaryOpExp(exp, ctx)
 		retCnt--
 	case *ast.FuncCallExp:
-		// TODO
+		genFuncCallExp(exp, ctx, retCnt)
+		retCnt = 0
 	default:
 		panic(fmt.Sprintf("do not support exp: %v", exp))
 	}
 	for i := 0; i < retCnt; i++ {
 		ctx.insLoadConst(nil)
 	}
+}
+
+func genFuncCallExp(exp *ast.FuncCallExp, ctx *Context, retCnt int) {
+	genExps(exp.Args, ctx, len(exp.Args))
+	genExp(exp.Func, ctx, 1)
+	ctx.insCall(byte(retCnt), byte(len(exp.Args)))
 }
 
 func genTernaryOpExp(exp *ast.TernaryOpExp, ctx *Context) {
