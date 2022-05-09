@@ -3,6 +3,7 @@ package codegen
 import (
 	"encoding/binary"
 	"fmt"
+	"gscript/complier/parser"
 	"gscript/proto"
 )
 
@@ -10,17 +11,27 @@ type Context struct {
 	buf         []byte
 	ct          *ConstTable
 	nt          *NameTable
+	ft          *FuncTable
 	bs          *blockStack
 	validLabels map[string]label
+
+	returnAtEnd bool
 }
 
-func newContext() *Context {
+func newContext(parser *parser.Parser) *Context {
 	return &Context{
 		ct:          newConstTable(),
 		nt:          NewNameTable(),
+		ft:          newFuncTable(parser.FuncDefs),
 		bs:          newBlockStack(),
 		validLabels: make(map[string]label),
 	}
+}
+
+func (ctx *Context) renew() {
+	ctx.returnAtEnd = false
+	ctx.nt = NewNameTable()
+	ctx.bs = newBlockStack()
 }
 
 func (ctx *Context) writeIns(ins byte) {
@@ -37,8 +48,20 @@ func (ctx *Context) writeByte(v byte) {
 	ctx.buf = append(ctx.buf, v)
 }
 
-func (ctx *Context) insPushName() {
+func (ctx *Context) insPushName(name string) {
 	ctx.writeIns(proto.INS_PUSH_NAME)
+	ctx.nt.Set(name)
+}
+
+func (ctx *Context) insCall(wantRtnCnt byte, argCnt byte) {
+	ctx.writeIns(proto.INS_CALL)
+	ctx.writeByte(wantRtnCnt)
+	ctx.writeByte(argCnt)
+}
+
+func (ctx *Context) insReturn(argCnt uint32) {
+	ctx.writeIns(proto.INS_RETURN)
+	ctx.writeUint(argCnt)
 }
 
 func (ctx *Context) insResizeNameTable(size uint32) int {
@@ -98,7 +121,17 @@ func (ctx *Context) insLoadName(name string) {
 			return
 		}
 	}
-	idx, ok := ctx.ct.getEnum(name)
+
+	// if name is a function?
+	idx, ok := ctx.ft.funcMap[name]
+	if ok {
+		ctx.writeIns(proto.INS_LOAD_FUNC)
+		ctx.writeUint(idx)
+		return
+	}
+
+	// if name is a enum constant?
+	idx, ok = ctx.ct.getEnum(name)
 	if ok {
 		ctx.writeIns(proto.INS_LOAD_CONST)
 		ctx.writeUint(idx)
