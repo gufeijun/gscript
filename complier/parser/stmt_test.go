@@ -111,14 +111,15 @@ func TestFuncCallStmt(t *testing.T) {
 	}
 	wants := []*NamedFuncCallStmt{
 		&NamedFuncCallStmt{
-			Var:       Var{"funcs", []Exp{&NumberLiteralExp{int64(0)}}},
-			Args:      []Exp{&NameExp{"a"}, &NameExp{"b"}},
-			CallTails: nil,
+			Prefix: "funcs",
+			CallTails: []CallTail{
+				CallTail{Attrs: []Exp{&NumberLiteralExp{int64(0)}}, Args: []Exp{&NameExp{"a"}, &NameExp{"b"}}},
+			},
 		},
 		&NamedFuncCallStmt{
-			Var:  Var{"f", nil},
-			Args: nil,
+			Prefix: "f",
 			CallTails: []CallTail{
+				{nil, nil},
 				{[]Exp{&StringLiteralExp{"a"}, &StringLiteralExp{"xxx"}}, []Exp{&NumberLiteralExp{int64(1)}}},
 				{nil, nil},
 				{nil, nil},
@@ -154,7 +155,7 @@ func A(a=1,b="good"){
 	}
 	wants := []*FuncDefStmt{
 		{"A", FuncLiteral{
-			Parameters: []Parameter{{"a", nil}, {"b", &NumberLiteralExp{int64(1)}}},
+			Parameters: []Parameter{{"a", nil}, {"b", int64(1)}},
 			VaArgs:     "",
 			Block: Block{Blocks: []BlockStmt{
 				NewParser(newLexer("let a=b;")).parseVarDeclStmt(),
@@ -166,7 +167,7 @@ func A(a=1,b="good"){
 			VaArgs:     "vararg",
 		}},
 		{"A", FuncLiteral{
-			Parameters: []Parameter{{"a", &NumberLiteralExp{int64(1)}}, {"b", &StringLiteralExp{"good"}}},
+			Parameters: []Parameter{{"a", int64(1)}, {"b", "good"}},
 			VaArgs:     "",
 			Block: Block{Blocks: []BlockStmt{
 				&ReturnStmt{

@@ -475,9 +475,9 @@ func TestParseFuncLiteralExp(t *testing.T) {
 		{nil, ""},
 		{[]Parameter{{"a", nil}}, ""},
 		{[]Parameter{{"a", nil}, {"b", nil}}, ""},
-		{[]Parameter{{"a", &NumberLiteralExp{int64(1)}}}, ""},
-		{[]Parameter{{"a", nil}, {"b", &StringLiteralExp{"xxx"}}}, ""},
-		{[]Parameter{{"a", nil}, {"b", &StringLiteralExp{"bbb"}}, {"c", &StringLiteralExp{"ccc"}}}, ""},
+		{[]Parameter{{"a", int64(1)}}, ""},
+		{[]Parameter{{"a", nil}, {"b", "xxx"}}, ""},
+		{[]Parameter{{"a", nil}, {"b", "bbb"}, {"c", "ccc"}}, ""},
 		{[]Parameter{{"a", nil}}, "b"},
 	}
 	for i := range funcLiterals {
