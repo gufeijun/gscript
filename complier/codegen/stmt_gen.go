@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"gscript/complier/ast"
 	"gscript/complier/parser"
-	. "gscript/proto"
+	"gscript/proto"
 	"unsafe"
 )
 
-func Gen(parser *parser.Parser) (text []Instruction, consts []interface{}, funcs []Func) {
+func Gen(parser *parser.Parser) (text []proto.Instruction, consts []interface{}, funcs []proto.Func) {
 	prog := parser.Parse()
 	ctx := newContext(parser)
 
@@ -17,11 +17,11 @@ func Gen(parser *parser.Parser) (text []Instruction, consts []interface{}, funcs
 	genEnumStmt(parser.EnumStmts, ctx)
 
 	genBlockStmts(prog.BlockStmts, ctx)
-	ctx.writeIns(INS_STOP)
+	ctx.writeIns(proto.INS_STOP)
 
 	genFuncDefStmts(parser.FuncDefs, ctx)
 
-	text = *(*[]Instruction)((unsafe.Pointer(&ctx.buf)))
+	text = *(*[]proto.Instruction)((unsafe.Pointer(&ctx.buf)))
 	consts = ctx.ct.Constants
 	funcs = ctx.ft.funcTable
 	return
@@ -64,37 +64,36 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 			genBlock(block, ctx)
 			continue
 		}
-		switch stmt.(type) {
+		switch stmt := stmt.(type) {
 		case *ast.VarDeclStmt:
-			genVarDeclStmt(stmt.(*ast.VarDeclStmt), ctx)
+			genVarDeclStmt(stmt, ctx)
 			varDecl = true
 		case *ast.VarAssignStmt:
-			genVarAssignStmt(stmt.(*ast.VarAssignStmt), ctx)
+			genVarAssignStmt(stmt, ctx)
 		case *ast.IfStmt:
-			genIfStmt(stmt.(*ast.IfStmt), ctx)
+			genIfStmt(stmt, ctx)
 		case *ast.WhileStmt:
-			genWhileStmt(stmt.(*ast.WhileStmt), ctx)
+			genWhileStmt(stmt, ctx)
 		case *ast.ForStmt:
-			genForStmt(stmt.(*ast.ForStmt), ctx)
+			genForStmt(stmt, ctx)
 		case *ast.BreakStmt:
-			genBreakStmt(stmt.(*ast.BreakStmt), ctx)
+			genBreakStmt(stmt, ctx)
 		case *ast.ContinueStmt:
-			genContinueStmt(stmt.(*ast.ContinueStmt), ctx)
+			genContinueStmt(stmt, ctx)
 		case *ast.SwitchStmt:
-			genSwitchStmt(stmt.(*ast.SwitchStmt), ctx)
+			genSwitchStmt(stmt, ctx)
 		case *ast.FallthroughStmt:
-			genFallthroughStmt(stmt.(*ast.FallthroughStmt), ctx)
+			genFallthroughStmt(stmt, ctx)
 		case *ast.NamedFuncCallStmt:
-			genFuncCallStmt(stmt.(*ast.NamedFuncCallStmt), ctx)
+			genFuncCallStmt(stmt, ctx)
 		case *ast.ReturnStmt:
-			genReturnStmt(stmt.(*ast.ReturnStmt), ctx)
+			genReturnStmt(stmt, ctx)
 		case *ast.LabelStmt:
-			_stmt := stmt.(*ast.LabelStmt)
-			ctx.validLabels[_stmt.Name] = label{_stmt.Name, ctx.textSize(), *ctx.nt.nameIdx}
+			ctx.validLabels[stmt.Name] = label{stmt.Name, ctx.textSize(), *ctx.nt.nameIdx}
 			// when exit block, make labels inside block invalid
-			defer func() { delete(ctx.validLabels, _stmt.Name) }()
+			defer func() { delete(ctx.validLabels, stmt.Name) }()
 		case *ast.GotoStmt:
-			gotos = append(gotos, genGotoStmt(stmt.(*ast.GotoStmt), ctx))
+			gotos = append(gotos, genGotoStmt(stmt, ctx))
 		case *ast.EnumStmt, *ast.FuncDefStmt:
 			continue
 		default:
@@ -131,7 +130,7 @@ func genFuncCallStmt(stmt *ast.NamedFuncCallStmt, ctx *Context) {
 		}
 		for _, attr := range callTail.Attrs {
 			genExp(attr, ctx, 1)
-			ctx.writeIns(INS_BINARY_ATTR)
+			ctx.writeIns(proto.INS_BINARY_ATTR)
 		}
 
 		// call function
@@ -420,7 +419,6 @@ func genIfStmt(stmt *ast.IfStmt, ctx *Context) {
 	for _, pos := range ja_addr_ptrs {
 		ctx.setAddr(pos, end)
 	}
-	return
 }
 
 func genVarDeclStmt(stmt *ast.VarDeclStmt, ctx *Context) {
@@ -438,9 +436,9 @@ func genVarAssignStmt(stmt *ast.VarAssignStmt, ctx *Context) {
 		length := len(target.Attrs)
 		if length == 0 {
 			if stmt.AssignOp != ast.ASIGN_OP_ASSIGN {
-				genExp(&ast.NameExp{target.Prefix}, ctx, 1)
-				ctx.writeIns(INS_ROT_TWO)
-				ctx.writeIns(byte(stmt.AssignOp-ast.ASIGN_OP_ASSIGN) + INS_BINARY_START)
+				genExp(&ast.NameExp{Name: target.Prefix}, ctx, 1)
+				ctx.writeIns(proto.INS_ROT_TWO)
+				ctx.writeIns(byte(stmt.AssignOp-ast.ASIGN_OP_ASSIGN) + proto.INS_BINARY_START)
 			}
 			ctx.insStoreName(target.Prefix)
 			continue
@@ -449,9 +447,9 @@ func genVarAssignStmt(stmt *ast.VarAssignStmt, ctx *Context) {
 		ctx.insLoadName(target.Prefix)
 		for i := 0; i < length-1; i++ {
 			genExp(target.Attrs[i], ctx, 1)
-			ctx.writeIns(INS_BINARY_ATTR)
+			ctx.writeIns(proto.INS_BINARY_ATTR)
 		}
-		ctx.writeIns(byte(stmt.AssignOp-ast.ASIGN_OP_START) + INS_ATTR_ASSIGN_START)
+		ctx.writeIns(byte(stmt.AssignOp-ast.ASIGN_OP_START) + proto.INS_ATTR_ASSIGN_START)
 	}
 }
 

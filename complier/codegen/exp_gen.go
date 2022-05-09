@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gscript/complier/ast"
-	. "gscript/proto"
+	"gscript/proto"
 )
 
 func genExps(exps []ast.Exp, ctx *Context, wantCnt int) {
@@ -21,9 +21,9 @@ func genExps(exps []ast.Exp, ctx *Context, wantCnt int) {
 }
 
 func genExp(exp ast.Exp, ctx *Context, retCnt int) {
-	switch exp.(type) {
+	switch exp := exp.(type) {
 	case *ast.NumberLiteralExp:
-		genNumberLiteralExp(exp.(*ast.NumberLiteralExp), ctx)
+		genNumberLiteralExp(exp, ctx)
 		retCnt--
 	case *ast.TrueExp:
 		genTrueExp(ctx)
@@ -32,32 +32,32 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 		genFalseExp(ctx)
 		retCnt--
 	case *ast.StringLiteralExp:
-		genStringExp(exp.(*ast.StringLiteralExp), ctx)
+		genStringExp(exp, ctx)
 		retCnt--
 	case *ast.NilExp:
-		genNilExp(exp.(*ast.NilExp), ctx)
+		genNilExp(exp, ctx)
 		retCnt--
 	case *ast.MapLiteralExp:
-		genMapLiteralExp(exp.(*ast.MapLiteralExp), ctx)
+		genMapLiteralExp(exp, ctx)
 		retCnt--
 	case *ast.ArrLiteralExp:
-		genArrLiteralExp(exp.(*ast.ArrLiteralExp), ctx)
+		genArrLiteralExp(exp, ctx)
 		retCnt--
 	case *ast.FuncLiteralExp:
 		// TODO
 	case *ast.NewObjectExp:
 		// TODO
 	case *ast.NameExp:
-		genNameExp(exp.(*ast.NameExp), ctx)
+		genNameExp(exp, ctx)
 		retCnt--
 	case *ast.UnOpExp:
-		genUnOpExp(exp.(*ast.UnOpExp), ctx)
+		genUnOpExp(exp, ctx)
 		retCnt--
 	case *ast.BinOpExp:
-		genBinOpExp(exp.(*ast.BinOpExp), ctx)
+		genBinOpExp(exp, ctx)
 		retCnt--
 	case *ast.TernaryOpExp:
-		genTernaryOpExp(exp.(*ast.TernaryOpExp), ctx)
+		genTernaryOpExp(exp, ctx)
 		retCnt--
 	case *ast.FuncCallExp:
 		// TODO
@@ -71,11 +71,11 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 
 func genTernaryOpExp(exp *ast.TernaryOpExp, ctx *Context) {
 	genExp(exp.Exp1, ctx, 1)
-	ctx.writeIns(INS_JUMP_IF)
+	ctx.writeIns(proto.INS_JUMP_IF)
 	ctx.writeUint(0) // to determine steps to jump
 	old := uint32(len(ctx.buf))
 	genExp(exp.Exp3, ctx, 1)
-	ctx.writeIns(INS_JUMP_REL)
+	ctx.writeIns(proto.INS_JUMP_REL)
 	ctx.writeUint(0) // to determine steps to jump
 	now := uint32(len(ctx.buf))
 	genExp(exp.Exp2, ctx, 1)
@@ -88,20 +88,20 @@ func genTernaryOpExp(exp *ast.TernaryOpExp, ctx *Context) {
 func genBinOpExp(exp *ast.BinOpExp, ctx *Context) {
 	genExp(exp.Exp1, ctx, 1)
 	genExp(exp.Exp2, ctx, 1)
-	ctx.writeIns(byte(exp.BinOp-ast.BINOP_START) + INS_BINARY_START)
+	ctx.writeIns(byte(exp.BinOp-ast.BINOP_START) + proto.INS_BINARY_START)
 }
 
 func genUnOpExp(exp *ast.UnOpExp, ctx *Context) {
 	switch exp.Op {
 	case ast.UNOP_NOT:
 		genExp(exp.Exp, ctx, 1)
-		ctx.writeIns(INS_UNARY_NOT)
+		ctx.writeIns(proto.INS_UNARY_NOT)
 	case ast.UNOP_LNOT:
 		genExp(exp.Exp, ctx, 1)
-		ctx.writeIns(INS_UNARY_LNOT)
+		ctx.writeIns(proto.INS_UNARY_LNOT)
 	case ast.UNOP_NEG:
 		genExp(exp.Exp, ctx, 1)
-		ctx.writeIns(INS_UNARY_NEG)
+		ctx.writeIns(proto.INS_UNARY_NEG)
 	case ast.UNOP_DEC: // --i
 		toAssignStmt(exp.Exp, ast.ASIGN_OP_SUBEQ, ctx)
 		genExp(exp.Exp, ctx, 1)
@@ -125,7 +125,7 @@ func genArrLiteralExp(exp *ast.ArrLiteralExp, ctx *Context) {
 	for _, val := range exp.Vals {
 		genExp(val, ctx, 1)
 	}
-	ctx.writeIns(INS_SLICE_NEW)
+	ctx.writeIns(proto.INS_SLICE_NEW)
 	ctx.writeUint(uint32(len(exp.Vals)))
 }
 
@@ -134,7 +134,7 @@ func genMapLiteralExp(exp *ast.MapLiteralExp, ctx *Context) {
 		ctx.insLoadConst(key)
 		genExp(exp.Vals[i], ctx, 1)
 	}
-	ctx.writeIns(INS_MAP_NEW)
+	ctx.writeIns(proto.INS_MAP_NEW)
 	ctx.writeUint(uint32(len(exp.Keys)))
 }
 
@@ -159,9 +159,9 @@ func genStringExp(exp *ast.StringLiteralExp, ctx *Context) {
 }
 
 func toAssignStmt(exp ast.Exp, op int, ctx *Context) {
-	stmt := &ast.VarAssignStmt{AssignOp: op, Rights: []ast.Exp{&ast.NumberLiteralExp{int64(1)}}}
+	stmt := &ast.VarAssignStmt{AssignOp: op, Rights: []ast.Exp{&ast.NumberLiteralExp{Value: int64(1)}}}
 	if e, ok := exp.(*ast.NameExp); ok {
-		stmt.Lefts = []ast.Var{ast.Var{Prefix: e.Name}}
+		stmt.Lefts = []ast.Var{{Prefix: e.Name}}
 		genVarAssignStmt(stmt, ctx)
 		return
 	}
