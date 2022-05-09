@@ -78,7 +78,6 @@ func (p *Parser) parseVarOpOrLabel() ast.Stmt {
 	name := p.l.NextToken().Content
 	if p.l.ConsumeIf(TOKEN_SEP_COLON) { // case4
 		label := &ast.LabelStmt{name}
-		p.Labels = append(p.Labels, label)
 		return label
 	}
 	v := p._parseVar(name)
@@ -462,7 +461,7 @@ func (p *Parser) parseFuncLiteral() (literal ast.FuncLiteral) {
 			// TODO error
 			panic(p.l.Line())
 		}
-		literal.VarArg = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
+		literal.VaArgs = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
 	}
 	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
 

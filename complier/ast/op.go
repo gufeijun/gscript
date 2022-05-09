@@ -6,7 +6,6 @@ import . "gscript/complier/lexer"
 const (
 	ASIGN_OP_START  = TOKEN_ASIGN_START + iota
 	ASIGN_OP_ASSIGN // =
-	ASIGN_OP_CLONE  // :=
 	ASIGN_OP_ADDEQ  // +=
 	ASIGN_OP_SUBEQ  // -=
 	ASIGN_OP_MULEQ  // *=
@@ -23,11 +22,11 @@ const (
 	BINOP_SUB   // -
 	BINOP_MUL   // *
 	BINOP_DIV   // /
-	BINOP_IDIV  // //
 	BINOP_MOD   // %
 	BINOP_AND   // &
-	BINOP_OR    // |
 	BINOP_XOR   // ^
+	BINOP_OR    // |
+	BINOP_IDIV  // //
 	BINOP_SHR   // >>
 	BINOP_SHL   // <<
 	BINOP_LE    // <=
@@ -38,7 +37,7 @@ const (
 	BINOP_NE    // !=
 	BINOP_LAND  // &&
 	BINOP_LOR   // ||
-	BINOP_ATTR  // []	 TODO
+	BINOP_ATTR  // []
 )
 
 const (

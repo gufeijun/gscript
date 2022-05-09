@@ -483,7 +483,7 @@ func TestParseFuncLiteralExp(t *testing.T) {
 	for i := range funcLiterals {
 		l := newLexer(funcLiterals[i])
 		exp := parseFuncLiteralExp(NewParser(l))
-		if wants[i].VarArg != exp.VarArg {
+		if wants[i].VarArg != exp.VaArgs {
 			t.Fatalf("parse func literal vararg failed:\n%s\n", funcLiterals[i])
 		}
 		if !reflect.DeepEqual(wants[i].Pars, exp.Parameters) {

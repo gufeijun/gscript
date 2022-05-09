@@ -11,7 +11,6 @@ type Parser struct {
 	l          *lexer.Lexer
 	EnumStmts  []*ast.EnumStmt
 	ClassStmts []*ast.ClassStmt
-	Labels     []*ast.LabelStmt
 	FuncDefs   []*ast.FuncDefStmt
 }
 

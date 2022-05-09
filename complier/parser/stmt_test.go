@@ -155,7 +155,7 @@ func A(a=1,b="good"){
 	wants := []*FuncDefStmt{
 		{"A", FuncLiteral{
 			Parameters: []Parameter{{"a", nil}, {"b", &NumberLiteralExp{int64(1)}}},
-			VarArg:     "",
+			VaArgs:     "",
 			Block: Block{Blocks: []BlockStmt{
 				NewParser(newLexer("let a=b;")).parseVarDeclStmt(),
 				NewParser(newLexer("print(a)")).parseVarOpOrLabel(),
@@ -163,11 +163,11 @@ func A(a=1,b="good"){
 		}},
 		{"A", FuncLiteral{
 			Parameters: []Parameter{{"a", nil}},
-			VarArg:     "vararg",
+			VaArgs:     "vararg",
 		}},
 		{"A", FuncLiteral{
 			Parameters: []Parameter{{"a", &NumberLiteralExp{int64(1)}}, {"b", &StringLiteralExp{"good"}}},
-			VarArg:     "",
+			VaArgs:     "",
 			Block: Block{Blocks: []BlockStmt{
 				&ReturnStmt{
 					Args: []Exp{&NameExp{"a"}, &NameExp{"b"}},
