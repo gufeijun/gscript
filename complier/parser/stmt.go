@@ -87,9 +87,12 @@ func (p *Parser) parseVarOpOrLabel() ast.Stmt {
 		return stmt
 	case TOKEN_SEP_LPAREN: // case3
 		stmt := new(ast.NamedFuncCallStmt)
-		stmt.Var = v
-		stmt.Args = parseExpListBlock(p)
-		stmt.CallTails = p.parseCallTails()
+		stmt.Prefix = v.Prefix
+		stmt.CallTails = append(stmt.CallTails, ast.CallTail{
+			Attrs: v.Attrs,
+			Args:  parseExpListBlock(p),
+		})
+		stmt.CallTails = append(stmt.CallTails, p.parseCallTails()...)
 		return stmt
 	default: // case 1
 		return p._parseAssignStmt(v)
@@ -476,7 +479,16 @@ func (p *Parser) parseParameters() (pars []ast.Parameter, defaultValue bool) {
 		if p.l.Expect(TOKEN_OP_ASSIGN) {
 			defaultValue = true
 			p.l.NextToken()
-			par.Default = parseExp(p)
+			switch token := p.l.NextToken(); token.Kind {
+			case TOKEN_KW_TRUE:
+				par.Default = true
+			case TOKEN_KW_FALSE:
+				par.Default = false
+			case TOKEN_STRING, TOKEN_NUMBER:
+				par.Default = token.Value
+			default:
+				panic("invalid default value") // TODO
+			}
 		} else if defaultValue {
 			// TODO error
 			panic(p.l.Line())

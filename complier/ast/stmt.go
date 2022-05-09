@@ -26,8 +26,7 @@ type VarAssignStmt struct {
 // function call may like this:
 // arr[1].FuncMap["Handlers"]("Sum")(1,2)
 type NamedFuncCallStmt struct {
-	Var       Var
-	Args      []Exp
+	Prefix    string
 	CallTails []CallTail
 }
 
@@ -55,8 +54,8 @@ type FuncLiteral struct {
 }
 
 type Parameter struct {
-	Name    string // parameter name
-	Default Exp    // default value
+	Name    string      // parameter name
+	Default interface{} // string, number, true or false
 }
 
 type AnonymousFuncCallStmt struct {
