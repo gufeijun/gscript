@@ -9,18 +9,43 @@ import (
 	"unsafe"
 )
 
-func Gen(parser *parser.Parser) (text []Instruction, consts []interface{}) {
+func Gen(parser *parser.Parser) (text []Instruction, consts []interface{}, funcs []Func) {
 	prog := parser.Parse()
-	ctx := newContext()
+	ctx := newContext(parser)
 
 	// make all enum statements global
 	genEnumStmt(parser.EnumStmts, ctx)
 
 	genBlockStmts(prog.BlockStmts, ctx)
 	ctx.writeIns(INS_STOP)
-	text = *(*[]Instruction)(unsafe.Pointer((unsafe.Pointer(&ctx.buf))))
+
+	genFuncDefStmts(parser.FuncDefs, ctx)
+
+	text = *(*[]Instruction)((unsafe.Pointer(&ctx.buf)))
 	consts = ctx.ct.Constants
+	funcs = ctx.ft.funcTable
 	return
+}
+
+func genFuncDefStmts(stmts []*ast.FuncDefStmt, ctx *Context) {
+	for i, stmt := range stmts {
+		ctx.ft.funcTable[i].Addr = ctx.textSize()
+		ctx.renew()
+		genFuncDefStmt(stmt, ctx)
+	}
+}
+
+func genFuncDefStmt(stmt *ast.FuncDefStmt, ctx *Context) {
+	if stmt.VaArgs != "" {
+		ctx.insPushName(stmt.VaArgs)
+	}
+	for i := len(stmt.Parameters) - 1; i >= 0; i-- {
+		ctx.insPushName(stmt.Parameters[i].Name)
+	}
+	genBlockStmts(stmt.Block.Blocks, ctx)
+	if !ctx.returnAtEnd {
+		genReturnStmt(&ast.ReturnStmt{}, ctx)
+	}
 }
 
 func genEnumStmt(stmts []*ast.EnumStmt, ctx *Context) {
@@ -34,6 +59,7 @@ func genEnumStmt(stmts []*ast.EnumStmt, ctx *Context) {
 func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 	var gotos []unhandledGoto
 	for _, stmt := range stmts {
+		ctx.returnAtEnd = false
 		if block, ok := stmt.(ast.Block); ok {
 			genBlock(block, ctx)
 			continue
@@ -58,8 +84,10 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 			genSwitchStmt(stmt.(*ast.SwitchStmt), ctx)
 		case *ast.FallthroughStmt:
 			genFallthroughStmt(stmt.(*ast.FallthroughStmt), ctx)
-		case *ast.EnumStmt:
-			continue
+		case *ast.NamedFuncCallStmt:
+			genFuncCallStmt(stmt.(*ast.NamedFuncCallStmt), ctx)
+		case *ast.ReturnStmt:
+			genReturnStmt(stmt.(*ast.ReturnStmt), ctx)
 		case *ast.LabelStmt:
 			_stmt := stmt.(*ast.LabelStmt)
 			ctx.validLabels[_stmt.Name] = label{_stmt.Name, ctx.textSize(), *ctx.nt.nameIdx}
@@ -67,12 +95,48 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 			defer func() { delete(ctx.validLabels, _stmt.Name) }()
 		case *ast.GotoStmt:
 			gotos = append(gotos, genGotoStmt(stmt.(*ast.GotoStmt), ctx))
+		case *ast.EnumStmt, *ast.FuncDefStmt:
+			continue
 		default:
 			panic(fmt.Sprintf("do not support stmt:%T", stmt))
 		}
 	}
 	handleGoto(ctx, gotos)
 	return
+}
+
+func genReturnStmt(stmt *ast.ReturnStmt, ctx *Context) {
+	ctx.returnAtEnd = true
+	for _, exp := range stmt.Args {
+		genExp(exp, ctx, 1)
+	}
+	ctx.insReturn(uint32(len(stmt.Args)))
+}
+
+func genFuncCallStmt(stmt *ast.NamedFuncCallStmt, ctx *Context) {
+	last := len(stmt.CallTails) - 1
+	for i, callTail := range stmt.CallTails {
+		var wantRetCnt byte
+		if i != last {
+			wantRetCnt = 1
+		}
+
+		for _, arg := range callTail.Args {
+			genExp(arg, ctx, 1) // arguments
+		}
+
+		// function
+		if i == 0 {
+			ctx.insLoadName(stmt.Prefix)
+		}
+		for _, attr := range callTail.Attrs {
+			genExp(attr, ctx, 1)
+			ctx.writeIns(INS_BINARY_ATTR)
+		}
+
+		// call function
+		ctx.insCall(wantRetCnt, byte(len(callTail.Args)))
+	}
 }
 
 func handleGoto(ctx *Context, gotos []unhandledGoto) {
@@ -362,9 +426,7 @@ func genIfStmt(stmt *ast.IfStmt, ctx *Context) {
 func genVarDeclStmt(stmt *ast.VarDeclStmt, ctx *Context) {
 	genExps(stmt.Rights, ctx, len(stmt.Lefts))
 	for i := len(stmt.Lefts) - 1; i >= 0; i-- {
-		ctx.insPushName()
-		name := stmt.Lefts[i]
-		ctx.nt.Set(name)
+		ctx.insPushName(stmt.Lefts[i])
 	}
 }
 
