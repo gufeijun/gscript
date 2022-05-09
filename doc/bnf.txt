@@ -69,7 +69,7 @@ caseBlocks ::= {caseBlock} [default ':' {block}]
 caseBlock ::= case exp {',' exp} ':' {block} 
 
 parlist ::= par {',' par} ['...' ID]      // function parameter
-par ::= ID ['=' exp]
+par ::= ID ['=' constLiteral]
 
 literal ::= mapLiteral | constLiteral | arrLiteral | funcLiteral
 
