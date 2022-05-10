@@ -211,8 +211,7 @@ func(num){
 				Parameters: []Parameter{{"a", nil}, {"b", nil}},
 				Block: Block{Blocks: []BlockStmt{&ReturnStmt{
 					Args: []Exp{&BinOpExp{BINOP_ADD, &NameExp{"a"}, &NameExp{"b"}}}}}}},
-			CallArgs:  []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
-			CallTails: nil,
+			CallTails: []CallTail{{Args: []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}}},
 		},
 		&AnonymousFuncCallStmt{
 			FuncLiteral: FuncLiteral{
@@ -221,8 +220,10 @@ func(num){
 					Keys: []interface{}{"show"},
 					Vals: []Exp{parseFuncLiteralExp(NewParser(newLexer("func(){print(num)}")))},
 				}}}}}},
-			CallArgs:  []Exp{&NumberLiteralExp{int64(1)}},
-			CallTails: []CallTail{{[]Exp{&StringLiteralExp{"show"}}, nil}},
+			CallTails: []CallTail{
+				{nil, []Exp{&NumberLiteralExp{int64(1)}}},
+				{[]Exp{&StringLiteralExp{"show"}}, nil},
+			},
 		},
 		&AnonymousFuncCallStmt{
 			FuncLiteral: FuncLiteral{
@@ -231,8 +232,8 @@ func(num){
 					Keys: []interface{}{"show"},
 					Vals: []Exp{parseFuncLiteralExp(NewParser(newLexer("func(){print(num)}")))},
 				}}}}}},
-			CallArgs: []Exp{&NumberLiteralExp{int64(1)}},
 			CallTails: []CallTail{
+				{nil, []Exp{&NumberLiteralExp{int64(1)}}},
 				{[]Exp{parseFuncCallOrAttrExp(NewParser(newLexer(`echo("show")`)))}, nil}},
 		},
 	}

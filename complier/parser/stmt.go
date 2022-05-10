@@ -504,8 +504,8 @@ func (p *Parser) parseParameters() (pars []ast.Parameter, defaultValue bool) {
 func (p *Parser) parseAnonymousFuncCallStmt() (stmt *ast.AnonymousFuncCallStmt) {
 	stmt = new(ast.AnonymousFuncCallStmt)
 	stmt.FuncLiteral = p.parseFuncLiteral()
-	stmt.CallArgs = parseExpListBlock(p)
-	stmt.CallTails = p.parseCallTails()
+	stmt.CallTails = []ast.CallTail{{Args: parseExpListBlock(p)}}
+	stmt.CallTails = append(stmt.CallTails, p.parseCallTails()...)
 	return
 }
 
