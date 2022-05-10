@@ -17,7 +17,9 @@ func (s *evalStack) Top() interface{} {
 }
 
 func (s *evalStack) Pop() {
-	s.Buf = s.Buf[:len(s.Buf)-1]
+	last := len(s.Buf) - 1
+	s.Buf[last] = nil
+	s.Buf = s.Buf[:last]
 }
 
 func (s *evalStack) Push(v interface{}) {
