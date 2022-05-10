@@ -19,7 +19,7 @@ func Gen(parser *parser.Parser) (text []proto.Instruction, consts []interface{},
 	genBlockStmts(prog.BlockStmts, ctx)
 	ctx.writeIns(proto.INS_STOP)
 
-	genFuncDefStmts(parser.FuncDefs, ctx)
+	genFuncDefStmts(ctx)
 
 	text = *(*[]proto.Instruction)((unsafe.Pointer(&ctx.buf)))
 	consts = ctx.ct.Constants
@@ -27,11 +27,12 @@ func Gen(parser *parser.Parser) (text []proto.Instruction, consts []interface{},
 	return
 }
 
-func genFuncDefStmts(stmts []*ast.FuncDefStmt, ctx *Context) {
-	for i, stmt := range stmts {
+func genFuncDefStmts(ctx *Context) {
+	// length of FuncDefs may change, so do not use for range!!!
+	for i := 0; i < len(ctx.parser.FuncDefs); i++ {
 		ctx.ft.funcTable[i].Addr = ctx.textSize()
 		ctx.renew()
-		genFuncLiteral(&stmt.FuncLiteral, ctx)
+		genFuncLiteral(&ctx.parser.FuncDefs[i].FuncLiteral, ctx)
 	}
 }
 
@@ -88,13 +89,18 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 			genFuncCallStmt(stmt, ctx)
 		case *ast.ReturnStmt:
 			genReturnStmt(stmt, ctx)
+		case *ast.AnonymousFuncCallStmt:
+			genAnonymousFuncCallStmt(stmt, ctx)
+		case *ast.LoopStmt:
+			// TODO
+			panic("do not support loop statement for now")
 		case *ast.LabelStmt:
 			ctx.validLabels[stmt.Name] = label{stmt.Name, ctx.textSize(), *ctx.nt.nameIdx}
 			// when exit block, make labels inside block invalid
 			defer func() { delete(ctx.validLabels, stmt.Name) }()
 		case *ast.GotoStmt:
 			gotos = append(gotos, genGotoStmt(stmt, ctx))
-		case *ast.EnumStmt, *ast.FuncDefStmt:
+		case *ast.EnumStmt, *ast.FuncDefStmt, *ast.ClassStmt:
 			continue
 		default:
 			panic(fmt.Sprintf("do not support stmt:%T", stmt))
@@ -102,6 +108,10 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 	}
 	handleGoto(ctx, gotos)
 	return
+}
+
+func genAnonymousFuncCallStmt(stmt *ast.AnonymousFuncCallStmt, ctx *Context) {
+	genFuncCall(&ast.FuncLiteralExp{FuncLiteral: stmt.FuncLiteral}, stmt.CallTails, ctx)
 }
 
 func genReturnStmt(stmt *ast.ReturnStmt, ctx *Context) {
@@ -113,18 +123,21 @@ func genReturnStmt(stmt *ast.ReturnStmt, ctx *Context) {
 }
 
 func genFuncCallStmt(stmt *ast.NamedFuncCallStmt, ctx *Context) {
-	last := len(stmt.CallTails) - 1
-	for i, callTail := range stmt.CallTails {
+	genFuncCall(&ast.NameExp{Name: stmt.Prefix}, stmt.CallTails, ctx)
+}
+
+func genFuncCall(exp ast.Exp, callTails []ast.CallTail, ctx *Context) {
+	last := len(callTails) - 1
+	for i, callTail := range callTails {
 		var wantRetCnt byte
 		if i != last {
 			wantRetCnt = 1
 		}
 
 		genExps(callTail.Args, ctx, len(callTail.Args))
-
 		// function
 		if i == 0 {
-			ctx.insLoadName(stmt.Prefix)
+			genExp(exp, ctx, 1)
 		}
 		for _, attr := range callTail.Attrs {
 			genExp(attr, ctx, 1)
