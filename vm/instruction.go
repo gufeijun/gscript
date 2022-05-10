@@ -404,7 +404,7 @@ func actionJumpCase(vm *VM) {
 }
 
 func actionCall(vm *VM) {
-	_func := vm.stack.Top().(*proto.Func)
+	_func := vm.stack.Top().(*proto.Closure)
 	vm.stack.Pop()
 
 	wantRtnCnt := int(vm.text[vm.pc])
@@ -413,7 +413,7 @@ func actionCall(vm *VM) {
 	vm.pc++
 
 	// generate a new function call frame
-	frame := &funcFrame{
+	frame := &stackFrame{
 		prev:        vm.frame,
 		symbolTable: newSymbolTable(),
 		wantRetCnt:  wantRtnCnt,
@@ -468,6 +468,7 @@ func actionReturn(vm *VM) {
 		vm.Stop()
 	}
 	vm.pc = vm.frame.returnAddr
+	vm.frame.symbolTable = nil
 	vm.frame = vm.frame.prev
 }
 
