@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"gscript/complier/ast"
+	"gscript/complier/parser"
 	"gscript/proto"
 )
 
@@ -22,4 +23,9 @@ func newFuncTable(funcs []*ast.FuncDefStmt) *FuncTable {
 		i++
 	}
 	return ft
+}
+
+func (ft *FuncTable) addFuncLiteral(literal *ast.FuncLiteral, p *parser.Parser) {
+	p.FuncDefs = append(p.FuncDefs, &ast.FuncDefStmt{Name: "", FuncLiteral: *literal})
+	ft.funcTable = append(ft.funcTable, proto.Func{Parameters: literal.Parameters, VaArgs: literal.VaArgs != ""})
 }

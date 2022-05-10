@@ -31,11 +31,11 @@ func genFuncDefStmts(stmts []*ast.FuncDefStmt, ctx *Context) {
 	for i, stmt := range stmts {
 		ctx.ft.funcTable[i].Addr = ctx.textSize()
 		ctx.renew()
-		genFuncDefStmt(stmt, ctx)
+		genFuncLiteral(&stmt.FuncLiteral, ctx)
 	}
 }
 
-func genFuncDefStmt(stmt *ast.FuncDefStmt, ctx *Context) {
+func genFuncLiteral(stmt *ast.FuncLiteral, ctx *Context) {
 	if stmt.VaArgs != "" {
 		ctx.insPushName(stmt.VaArgs)
 	}

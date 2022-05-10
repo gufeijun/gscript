@@ -8,6 +8,7 @@ import (
 )
 
 type Context struct {
+	parser      *parser.Parser
 	buf         []byte
 	ct          *ConstTable
 	nt          *NameTable
@@ -20,6 +21,7 @@ type Context struct {
 
 func newContext(parser *parser.Parser) *Context {
 	return &Context{
+		parser:      parser,
 		ct:          newConstTable(),
 		nt:          NewNameTable(),
 		ft:          newFuncTable(parser.FuncDefs),
@@ -113,6 +115,11 @@ func (ctx *Context) insLoadConst(c interface{}) {
 	ctx.writeUint(idx)
 }
 
+func (ctx *Context) insLoadFunc(idx uint32) {
+	ctx.writeIns(proto.INS_LOAD_FUNC)
+	ctx.writeUint(idx)
+}
+
 func (ctx *Context) insLoadName(name string) {
 	for nt := ctx.nt; nt != nil; nt = nt.prev {
 		if idx, ok := nt.nameTable[name]; ok {
@@ -125,8 +132,7 @@ func (ctx *Context) insLoadName(name string) {
 	// if name is a function?
 	idx, ok := ctx.ft.funcMap[name]
 	if ok {
-		ctx.writeIns(proto.INS_LOAD_FUNC)
-		ctx.writeUint(idx)
+		ctx.insLoadFunc(idx)
 		return
 	}
 

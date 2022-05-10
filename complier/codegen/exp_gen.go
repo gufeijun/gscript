@@ -45,7 +45,8 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 		genArrLiteralExp(exp, ctx)
 		retCnt--
 	case *ast.FuncLiteralExp:
-		// TODO
+		genFuncLiteralExp(exp, ctx)
+		retCnt--
 	case *ast.NewObjectExp:
 		// TODO
 	case *ast.NameExp:
@@ -69,6 +70,11 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 	for i := 0; i < retCnt; i++ {
 		ctx.insLoadConst(nil)
 	}
+}
+
+func genFuncLiteralExp(exp *ast.FuncLiteralExp, ctx *Context) {
+	ctx.ft.addFuncLiteral(&exp.FuncLiteral, ctx.parser)
+	ctx.insLoadFunc(uint32(len(ctx.ft.funcTable) - 1))
 }
 
 func genFuncCallExp(exp *ast.FuncCallExp, ctx *Context, retCnt int) {
