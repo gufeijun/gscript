@@ -60,7 +60,6 @@ type Parameter struct {
 
 type AnonymousFuncCallStmt struct {
 	FuncLiteral
-	CallArgs  []Exp
 	CallTails []CallTail
 }
 
