@@ -1,5 +1,7 @@
 package codegen
 
+import "fmt"
+
 type ConstTable struct {
 	Constants []interface{}
 	ConsMap   map[interface{}]uint32 // constant -> constants index
@@ -15,6 +17,9 @@ func newConstTable() *ConstTable {
 }
 
 func (ct *ConstTable) saveEnum(enum string, num int64) {
+	if _, ok := ct.enums[enum]; ok {
+		panic(fmt.Sprintf("enum %s is already exists", enum))
+	}
 	ct.enums[enum] = uint32(len(ct.Constants))
 	ct.Constants = append(ct.Constants, num)
 }
