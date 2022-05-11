@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"encoding/binary"
 	"fmt"
 	"gscript/complier/ast"
 	"gscript/complier/parser"
@@ -9,7 +8,7 @@ import (
 	"unsafe"
 )
 
-func Gen(parser *parser.Parser) (text []proto.Instruction, consts []interface{}, funcs []proto.Func) {
+func Gen(parser *parser.Parser) (_proto proto.Proto) {
 	prog := parser.Parse()
 	ctx := newContext(parser)
 
@@ -19,48 +18,21 @@ func Gen(parser *parser.Parser) (text []proto.Instruction, consts []interface{},
 	genBlockStmts(prog.BlockStmts, ctx)
 	ctx.writeIns(proto.INS_STOP)
 
-	genFuncDefStmts(ctx)
+	// merge bytes codes of functions together
+	mergeFuncCodes(ctx)
 
-	text = *(*[]proto.Instruction)((unsafe.Pointer(&ctx.buf)))
-	consts = ctx.ct.Constants
-	funcs = ctx.ft.funcTable
-	return
-}
-
-func genFuncDefStmts(ctx *Context) {
-	// length of FuncDefs may change, so do not use for range!!!
-	for i := 0; i < len(ctx.parser.FuncDefs); i++ {
-		ctx.ft.funcTable[i].Addr = ctx.textSize()
-		ctx.renew()
-		genFuncLiteral(&ctx.parser.FuncDefs[i].FuncLiteral, ctx)
-	}
-}
-
-func genFuncLiteral(stmt *ast.FuncLiteral, ctx *Context) {
-	if stmt.VaArgs != "" {
-		ctx.insPushName(stmt.VaArgs)
-	}
-	for i := len(stmt.Parameters) - 1; i >= 0; i-- {
-		ctx.insPushName(stmt.Parameters[i].Name)
-	}
-	genBlockStmts(stmt.Block.Blocks, ctx)
-	if !ctx.returnAtEnd {
-		genReturnStmt(&ast.ReturnStmt{}, ctx)
-	}
-}
-
-func genEnumStmt(stmts []*ast.EnumStmt, ctx *Context) {
-	for _, stmt := range stmts {
-		for i := range stmt.Names {
-			ctx.ct.saveEnum(stmt.Names[i], stmt.Values[i])
-		}
+	return proto.Proto{
+		Text:           *(*[]proto.Instruction)((unsafe.Pointer(&ctx.frame.text))),
+		Consts:         ctx.ct.Constants,
+		Funcs:          ctx.ft.funcTable,
+		AnonymousFuncs: ctx.ft.anonymousFuncs,
 	}
 }
 
 func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 	var gotos []unhandledGoto
 	for _, stmt := range stmts {
-		ctx.returnAtEnd = false
+		ctx.frame.returnAtEnd = false
 		if block, ok := stmt.(ast.Block); ok {
 			genBlock(block, ctx)
 			continue
@@ -91,16 +63,18 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 			genReturnStmt(stmt, ctx)
 		case *ast.AnonymousFuncCallStmt:
 			genAnonymousFuncCallStmt(stmt, ctx)
+		case *ast.FuncDefStmt:
+			genFuncDefStmt(stmt, ctx)
 		case *ast.LoopStmt:
 			// TODO
 			panic("do not support loop statement for now")
 		case *ast.LabelStmt:
-			ctx.validLabels[stmt.Name] = label{stmt.Name, ctx.textSize(), *ctx.nt.nameIdx}
+			ctx.frame.validLabels[stmt.Name] = label{stmt.Name, ctx.textSize(), *ctx.frame.nt.nameIdx}
 			// when exit block, make labels inside block invalid
-			defer func() { delete(ctx.validLabels, stmt.Name) }()
+			defer func() { delete(ctx.frame.validLabels, stmt.Name) }()
 		case *ast.GotoStmt:
 			gotos = append(gotos, genGotoStmt(stmt, ctx))
-		case *ast.EnumStmt, *ast.FuncDefStmt, *ast.ClassStmt:
+		case *ast.EnumStmt, *ast.ClassStmt:
 			continue
 		default:
 			panic(fmt.Sprintf("do not support stmt:%T", stmt))
@@ -110,12 +84,67 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 	return
 }
 
+func genFuncDefStmt(stmt *ast.FuncDefStmt, ctx *Context) {
+	funcIdx := ctx.ft.funcMap[stmt.Name]
+
+	genFuncLiteral(&stmt.FuncLiteral, ctx, funcIdx, false)
+}
+
+func genFuncLiteral(literal *ast.FuncLiteral, ctx *Context, idx uint32, anonymous bool) {
+	ctx.pushFrame(anonymous, int(idx))
+	if literal.VaArgs != "" {
+		ctx.insPushName(literal.VaArgs)
+	}
+	for i := len(literal.Parameters) - 1; i >= 0; i-- {
+		ctx.insPushName(literal.Parameters[i].Name)
+	}
+	genBlockStmts(literal.Block.Blocks, ctx)
+	if !ctx.frame.returnAtEnd {
+		genReturnStmt(&ast.ReturnStmt{}, ctx)
+	}
+
+	bindUpValue(ctx, idx, anonymous)
+}
+
+func bindUpValue(ctx *Context, funcIdx uint32, anonymous bool) {
+	oldFrame := ctx.popFrame()
+	upValues := oldFrame.vt.upValues
+
+	if anonymous {
+		ctx.ft.anonymousFuncTexts[ctx.frame.nowParsingAnonymous] = oldFrame.text
+		ft := ctx.ft.anonymousFuncs
+		for _, upValue := range upValues {
+			vptr := getUpValueIdx(ctx.frame, ctx, &upValue)
+			ft[funcIdx].UpValues = append(ft[funcIdx].UpValues, vptr)
+		}
+	} else {
+		ctx.ft.funcTexts = append(ctx.ft.funcTexts, oldFrame.text)
+		ft := ctx.ft.funcTable
+		for _, upValue := range upValues {
+			ft[funcIdx].UpValues = append(ft[funcIdx].UpValues, upValue.nameIdx)
+		}
+	}
+}
+
+func getUpValueIdx(frame *StackFrame, ctx *Context, upValue *UpValue) proto.UpValuePtr {
+	if upValue.level == 0 {
+		return proto.UpValuePtr{true, upValue.nameIdx}
+	}
+	upValue.level--
+	valueIdx, _, ok := frame.vt.get(upValue.name)
+	if ok {
+		return proto.UpValuePtr{false, valueIdx}
+	}
+	valueIdx = frame.vt.set(upValue.name, upValue.level, upValue.nameIdx)
+	return proto.UpValuePtr{false, valueIdx}
+}
+
 func genAnonymousFuncCallStmt(stmt *ast.AnonymousFuncCallStmt, ctx *Context) {
 	genFuncCall(&ast.FuncLiteralExp{FuncLiteral: stmt.FuncLiteral}, stmt.CallTails, ctx)
 }
 
 func genReturnStmt(stmt *ast.ReturnStmt, ctx *Context) {
-	ctx.returnAtEnd = true
+	ctx.frame.returnAtEnd = true
 	for _, exp := range stmt.Args {
 		genExp(exp, ctx, 1)
 	}
@@ -150,22 +179,19 @@ func genFuncCall(exp ast.Exp, callTails []ast.CallTail, ctx *Context) {
 }
 
 func handleGoto(ctx *Context, gotos []unhandledGoto) {
-	writeUint := func(start int, val uint32) {
-		binary.LittleEndian.PutUint32(ctx.buf[start:start+4], val)
-	}
 	for _, _goto := range gotos {
-		label, ok := ctx.validLabels[_goto.label]
+		label, ok := ctx.frame.validLabels[_goto.label]
 		if !ok {
 			panic(fmt.Sprintf("invalid goto label: %s", _goto.label))
 		}
-		writeUint(_goto.jumpPos, label.addr)
-		writeUint(_goto.resizePos, label.nameTableSize)
+		ctx.setSteps(_goto.jumpPos, label.addr)
+		ctx.setSteps(_goto.resizePos, label.nameTableSize)
 	}
 }
 
 func genGotoStmt(stmt *ast.GotoStmt, ctx *Context) unhandledGoto {
 	resizePos := ctx.insResizeNameTable(0)
-	jumpPos := ctx.insJumpAbs(0)
+	jumpPos := ctx.insJumpRel(0)
 	return unhandledGoto{
 		label:     stmt.Label,
 		resizePos: resizePos,
@@ -174,19 +200,19 @@ func genGotoStmt(stmt *ast.GotoStmt, ctx *Context) unhandledGoto {
 }
 
 func genFallthroughStmt(stmt *ast.FallthroughStmt, ctx *Context) {
-	b := ctx.bs.latestSwitch()
+	b := ctx.frame.bs.latestSwitch()
 	ctx.insResizeNameTable(b.nameCnt)
-	pos := ctx.insJumpAbs(0)
+	pos := ctx.insJumpRel(0)
 	b._fallthrough = &pos
 }
 
 func genContinueStmt(stmt *ast.ContinueStmt, ctx *Context) {
-	b := ctx.bs.latestFor()
-	b.continues = append(b.continues, ctx.insJumpAbs(0))
+	b := ctx.frame.bs.latestFor()
+	b.continues = append(b.continues, ctx.insJumpRel(0))
 }
 
 func genBreakStmt(stmt *ast.BreakStmt, ctx *Context) {
-	b := ctx.bs.top()
+	b := ctx.frame.bs.top()
 	var breaks *[]int
 	if fb, ok := b.(*forBlock); ok {
 		breaks = &fb.breaks
@@ -195,7 +221,7 @@ func genBreakStmt(stmt *ast.BreakStmt, ctx *Context) {
 		breaks = &sb.breaks
 		ctx.insResizeNameTable(sb.nameCnt)
 	}
-	*breaks = append(*breaks, ctx.insJumpAbs(0))
+	*breaks = append(*breaks, ctx.insJumpRel(0))
 }
 
 /*
@@ -235,8 +261,8 @@ end:
 	other_code
 */
 func genSwitchStmt(stmt *ast.SwitchStmt, ctx *Context) {
-	ctx.bs.pushSwitch(*ctx.nt.nameIdx)
-	sb := ctx.bs.top().(*switchBlock)
+	ctx.frame.bs.pushSwitch(*ctx.frame.nt.nameIdx)
+	sb := ctx.frame.bs.top().(*switchBlock)
 
 	var pos_ptrs []int
 	var end_ptrs []int
@@ -253,9 +279,9 @@ func genSwitchStmt(stmt *ast.SwitchStmt, ctx *Context) {
 		}
 	}
 	if stmt.Default != nil {
-		pos_ptrs = append(pos_ptrs, ctx.insJumpAbs(0))
+		pos_ptrs = append(pos_ptrs, ctx.insJumpRel(0))
 	} else {
-		end_ptrs = append(end_ptrs, ctx.insJumpAbs(0))
+		end_ptrs = append(end_ptrs, ctx.insJumpRel(0))
 	}
 	var i int
 	for j, stmts := range stmt.Blocks {
@@ -266,27 +292,27 @@ func genSwitchStmt(stmt *ast.SwitchStmt, ctx *Context) {
 				end_ptrs = append(end_ptrs, pos)
 				continue
 			}
-			ctx.setAddr(pos, ctx.textSize())
+			ctx.setSteps(pos, ctx.textSize())
 		}
 		if stmts == nil {
 			continue
 		}
 		for k := 0; k < len(stmt.Cases[j]); k++ {
-			ctx.setAddr(pos_ptrs[i], ctx.textSize())
+			ctx.setSteps(pos_ptrs[i], ctx.textSize())
 			i++
 		}
 		genStmtsWithBlock(stmts, ctx)
 		if stmt.Default != nil || j != len(stmt.Blocks)-1 {
-			end_ptrs = append(end_ptrs, ctx.insJumpAbs(0))
+			end_ptrs = append(end_ptrs, ctx.insJumpRel(0))
 		}
 	}
 	if stmt.Default != nil {
 		if sb._fallthrough != nil {
 			pos := *sb._fallthrough
 			sb._fallthrough = nil
-			ctx.setAddr(pos, ctx.textSize())
+			ctx.setSteps(pos, ctx.textSize())
 		}
-		ctx.setAddr(pos_ptrs[i], ctx.textSize())
+		ctx.setSteps(pos_ptrs[i], ctx.textSize())
 		genStmtsWithBlock(stmt.Default, ctx)
 	}
 	if sb._fallthrough != nil {
@@ -294,13 +320,13 @@ func genSwitchStmt(stmt *ast.SwitchStmt, ctx *Context) {
 	}
 	end := ctx.textSize()
 	for _, end_ptr := range end_ptrs {
-		ctx.setAddr(end_ptr, end)
+		ctx.setSteps(end_ptr, end)
 	}
 	ctx.insPopTop()
 	for i := range sb.breaks {
-		ctx.setAddr(sb.breaks[i], end)
+		ctx.setSteps(sb.breaks[i], end)
 	}
-	ctx.bs.pop()
+	ctx.frame.bs.pop()
 }
 
 /*
@@ -335,7 +361,7 @@ func genForStmt(stmt *ast.ForStmt, ctx *Context) {
 		stmt.Condition = &ast.TrueExp{}
 	}
 	ctx.enterBlock()
-	startSize := *ctx.nt.nameIdx
+	startSize := *ctx.frame.nt.nameIdx
 	var varDecl bool
 	// e1
 	if stmt.AsgnStmt != nil {
@@ -344,34 +370,34 @@ func genForStmt(stmt *ast.ForStmt, ctx *Context) {
 		genVarDeclStmt(stmt.DeclStmt, ctx)
 		varDecl = true
 	}
-	curSize := *ctx.nt.nameIdx
-	ctx.bs.pushFor(curSize)
+	curSize := *ctx.frame.nt.nameIdx
+	ctx.frame.bs.pushFor(curSize)
 
 	p0 := ctx.textSize()
 	genExp(stmt.Condition, ctx, 1)
 	p1ptr := ctx.insJumpIf(0)
-	p2ptr := ctx.insJumpAbs(0)
-	ctx.setAddr(p1ptr, ctx.textSize())
+	p2ptr := ctx.insJumpRel(0)
+	ctx.setSteps(p1ptr, ctx.textSize())
 	varDecl = genBlockStmts(stmt.Block.Blocks, ctx) || varDecl
 	p3 := ctx.textSize()
 	ctx.insResizeNameTable(curSize)
 	if stmt.ForTail != nil {
 		genVarAssignStmt(stmt.ForTail, ctx) // e2
 	}
-	ctx.insJumpAbs(p0)
+	ctx.insJumpRel(p0)
 	p2 := ctx.textSize()
-	ctx.setAddr(p2ptr, p2)
+	ctx.setSteps(p2ptr, p2)
 
 	ctx.leaveBlock(startSize, varDecl)
 
-	fs := ctx.bs.top().(*forBlock)
+	fs := ctx.frame.bs.top().(*forBlock)
 	for i := range fs.breaks {
-		ctx.setAddr(fs.breaks[i], p2)
+		ctx.setSteps(fs.breaks[i], p2)
 	}
 	for i := range fs.continues {
-		ctx.setAddr(fs.continues[i], p3)
+		ctx.setSteps(fs.continues[i], p3)
 	}
-	ctx.bs.pop()
+	ctx.frame.bs.pop()
 }
 
 func genWhileStmt(stmt *ast.WhileStmt, ctx *Context) {
@@ -417,18 +443,18 @@ func genIfStmt(stmt *ast.IfStmt, ctx *Context) {
 		genExp(condition, ctx, 1)
 		jf_addr_ptrs = append(jf_addr_ptrs, ctx.insJumpIf(0))
 	}
-	ja_addr_ptrs = append(ja_addr_ptrs, ctx.insJumpAbs(0))
+	ja_addr_ptrs = append(ja_addr_ptrs, ctx.insJumpRel(0))
 	last := len(stmt.Blocks) - 1
 	for i := 0; i < len(stmt.Blocks); i++ {
-		ctx.setAddr(jf_addr_ptrs[i], ctx.textSize())
+		ctx.setSteps(jf_addr_ptrs[i], ctx.textSize())
 		genBlock(stmt.Blocks[i], ctx)
 		if i != last {
-			ja_addr_ptrs = append(ja_addr_ptrs, ctx.insJumpAbs(0))
+			ja_addr_ptrs = append(ja_addr_ptrs, ctx.insJumpRel(0))
 		}
 	}
 	end := ctx.textSize()
 	for _, pos := range ja_addr_ptrs {
-		ctx.setAddr(pos, end)
+		ctx.setSteps(pos, end)
 	}
 }
 
@@ -470,7 +496,27 @@ func genBlock(block ast.Block, ctx *Context) {
 
 func genStmtsWithBlock(stmts []ast.BlockStmt, ctx *Context) {
 	ctx.enterBlock()
-	size := *ctx.nt.nameIdx
+	size := *ctx.frame.nt.nameIdx
 	varDecl := genBlockStmts(stmts, ctx)
 	ctx.leaveBlock(size, varDecl)
+}
+
+// TODO can optimize
+func mergeFuncCodes(ctx *Context) {
+	for i := 0; i < len(ctx.ft.funcTexts); i++ {
+		ctx.ft.funcTable[i].Info.Addr = ctx.textSize()
+		ctx.frame.text = append(ctx.frame.text, ctx.ft.funcTexts[i]...)
+	}
+	for i := 0; i < len(ctx.ft.anonymousFuncs); i++ {
+		ctx.ft.anonymousFuncs[i].Info.Addr = ctx.textSize()
+		ctx.frame.text = append(ctx.frame.text, ctx.ft.anonymousFuncTexts[i]...)
+	}
+}
+
+func genEnumStmt(stmts []*ast.EnumStmt, ctx *Context) {
+	for _, stmt := range stmts {
+		for i := range stmt.Names {
+			ctx.ct.saveEnum(stmt.Names[i], stmt.Values[i])
+		}
+	}
 }
