@@ -7,12 +7,12 @@ type stackFrame struct {
 	symbolTable *symbolTable
 	wantRetCnt  int
 	returnAddr  uint32
-	upValues    []*interface{}
+	upValues    []*GsValue
 }
 
 type Closure struct {
 	Info     *proto.BasicInfo
-	UpValues []*interface{}
+	UpValues []*GsValue
 }
 
 func newFuncFrame() *stackFrame {
