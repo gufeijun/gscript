@@ -7,24 +7,27 @@ import (
 )
 
 type VM struct {
-	text       []proto.Instruction
-	constTable []interface{}
-	frame      *funcFrame
-	funcTable  []proto.Func
-	stack      *evalStack
-	pc         uint32
-
-	stopped bool
+	stopped        bool
+	pc             uint32
+	topFrame       *stackFrame
+	frame          *stackFrame
+	stack          *evalStack
+	text           []proto.Instruction
+	constTable     []interface{}
+	funcTable      []proto.FuncProto
+	anonymousTable []proto.AnonymousFuncProto
 }
 
-func NewVM(Text []proto.Instruction, ct []interface{}, ft []proto.Func) *VM {
+func NewVM(_proto *proto.Proto) *VM {
+	topFrame := newFuncFrame()
 	return &VM{
-		text:       Text,
-		constTable: ct,
-		stack:      newEvalStack(),
-		frame:      newFuncFrame(),
-		funcTable:  ft,
-		pc:         0,
+		topFrame:       topFrame,
+		frame:          topFrame,
+		stack:          newEvalStack(),
+		text:           _proto.Text,
+		constTable:     _proto.Consts,
+		funcTable:      _proto.Funcs,
+		anonymousTable: _proto.AnonymousFuncs,
 	}
 }
 
