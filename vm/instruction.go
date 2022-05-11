@@ -32,8 +32,10 @@ var actions = []func(vm *VM){
 	actionLoadConst,
 	actionLoadName,
 	actionLoadFunc,
-	actionLoadValue,
+	actionLoadAnonymous,
+	actionLoadUpValue,
 	actionStoreName,
+	actionStoreUpValue,
 	actionPushNameNil,
 	actionPushName,
 	actionResizeNameTable,
@@ -205,16 +207,50 @@ func actionLoadName(vm *VM) {
 }
 
 func actionLoadFunc(vm *VM) {
-	vm.stack.Push(&vm.funcTable[vm.getOpNum()])
+	f := &vm.funcTable[vm.getOpNum()]
+	if f.UpValueTable == nil {
+		table := make([]*GsValue, 0, len(f.UpValues))
+		for _, nameIdx := range f.UpValues {
+			v := vm.topFrame.symbolTable.values[nameIdx]
+			table = append(table, v)
+		}
+		f.UpValueTable = table
+	}
+	vm.stack.Push(&Closure{
+		Info:     f.Info,
+		UpValues: f.UpValueTable.([]*GsValue),
+	})
 }
 
-func actionLoadValue(vm *VM) {
-	val := vm.getOpNum()
-	vm.stack.Push(int64(val))
+func actionLoadAnonymous(vm *VM) {
+	f := &vm.anonymousTable[vm.getOpNum()]
+	closure := &Closure{
+		Info:     f.Info,
+		UpValues: make([]*GsValue, 0, len(f.UpValues)),
+	}
+	for _, upValue := range f.UpValues {
+		var v *GsValue
+		if !upValue.DirectDependent {
+			v = vm.frame.upValues[upValue.Index]
+		} else {
+			v = vm.frame.symbolTable.values[upValue.Index]
+		}
+		closure.UpValues = append(closure.UpValues, v)
+	}
+	vm.stack.Push(closure)
+}
+
+func actionLoadUpValue(vm *VM) {
+	vm.stack.Push(vm.frame.upValues[vm.getOpNum()].value)
 }
 
 func actionStoreName(vm *VM) {
 	vm.frame.symbolTable.setValue(vm.getOpNum(), vm.stack.Top())
+	vm.stack.Pop()
+}
+
+func actionStoreUpValue(vm *VM) {
+	vm.frame.upValues[vm.getOpNum()].value = vm.stack.Top()
 	vm.stack.Pop()
 }
 
@@ -387,9 +423,9 @@ func actionJumpAbs(vm *VM) {
 func actionJumpIf(vm *VM) {
 	top := vm.stack.Top()
 	vm.stack.Pop()
-	addr := vm.getOpNum()
+	steps := vm.getOpNum()
 	if getBool(top) {
-		vm.pc = addr
+		vm.pc += steps
 	}
 }
 
@@ -397,14 +433,14 @@ func actionJumpCase(vm *VM) {
 	caseCond := vm.stack.Top()
 	vm.stack.Pop()
 	switchCond := vm.stack.Top()
-	addr := vm.getOpNum()
+	steps := vm.getOpNum()
 	if eqAction(caseCond, switchCond).(bool) {
-		vm.pc = addr
+		vm.pc += steps
 	}
 }
 
 func actionCall(vm *VM) {
-	_func := vm.stack.Top().(*proto.Closure)
+	_func := vm.stack.Top().(*Closure)
 	vm.stack.Pop()
 
 	wantRtnCnt := int(vm.text[vm.pc])
@@ -418,17 +454,18 @@ func actionCall(vm *VM) {
 		symbolTable: newSymbolTable(),
 		wantRetCnt:  wantRtnCnt,
 		returnAddr:  vm.pc,
+		upValues:    _func.UpValues,
 	}
 	vm.frame = frame
 
-	parCnt := uint32(len(_func.Parameters))
+	parCnt := uint32(len(_func.Info.Parameters))
 
 	// if arguments is fewer than parameters, push several nil values to make up
 	for argCnt < parCnt {
-		vm.stack.Push(_func.Parameters[argCnt].Default)
+		vm.stack.Push(_func.Info.Parameters[argCnt].Default)
 		argCnt++
 	}
-	if _func.VaArgs {
+	if _func.Info.VaArgs {
 		// collect VaArgs
 		i := argCnt - parCnt
 		arr := make([]interface{}, i)
@@ -448,7 +485,7 @@ func actionCall(vm *VM) {
 	}
 
 	// jump to function
-	vm.pc = _func.Addr
+	vm.pc = _func.Info.Addr
 }
 
 func actionReturn(vm *VM) {
