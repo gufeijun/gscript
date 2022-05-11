@@ -11,17 +11,52 @@ import (
 )
 
 var cmds = map[string]func(vm *VM, args []string){
-	"help":  debugHelp,
-	"n":     debugNext,
-	"next":  debugNext,
-	"v":     debugShowVar,
-	"var":   debugShowVar,
-	"s":     debugShowStack,
-	"stack": debugShowStack,
-	"c":     debugShowCode,
-	"code":  debugShowCode,
-	"const": debugShowConstant,
-	"r":     debugRun,
+	"help":    debugHelp,
+	"n":       debugNext,
+	"next":    debugNext,
+	"v":       debugShowVar,
+	"var":     debugShowVar,
+	"s":       debugShowStack,
+	"stack":   debugShowStack,
+	"c":       debugShowCode,
+	"code":    debugShowCode,
+	"const":   debugShowConstant,
+	"r":       debugRun,
+	"f":       debugShowFunc,
+	"upvalue": debugShowUpValue,
+}
+
+func debugShowUpValue(vm *VM, args []string) {
+	fmt.Printf("upValues: ")
+	for i, v := range vm.frame.upValues {
+		fmt.Printf("%v", v.value)
+		if i != len(vm.frame.upValues) {
+			fmt.Printf(", ")
+		}
+	}
+	fmt.Println()
+}
+
+func debugShowFunc(vm *VM, args []string) {
+	fmt.Printf("functions: ")
+	for i, f := range vm.funcTable {
+		fmt.Printf("{")
+		fmt.Printf("addr: %d, ", f.Info.Addr)
+		fmt.Printf("upvalues: [")
+		if upvalues, ok := f.UpValueTable.([]*GsValue); ok {
+			for i, v := range upvalues {
+				fmt.Printf("%v", v.value)
+				if i != len(upvalues)-1 {
+					fmt.Printf(", ")
+				}
+			}
+		}
+		fmt.Printf("]}")
+		if i != len(vm.funcTable)-1 {
+			fmt.Printf(", ")
+		}
+	}
+	fmt.Println()
 }
 
 func debugShowConstant(vm *VM, args []string) {
@@ -79,8 +114,8 @@ func debugShowStack(vm *VM, args []string) {
 
 func debugShowVar(vm *VM, args []string) {
 	fmt.Printf("variables: ")
-	for i, value := range vm.frame.symbolTable.values {
-		showValue(value)
+	for i, val := range vm.frame.symbolTable.values {
+		showValue(val.value)
 		if i != len(vm.frame.symbolTable.values)-1 {
 			fmt.Printf(", ")
 		}
@@ -125,11 +160,24 @@ func (vm *VM) Debug() {
 }
 
 func showValue(val interface{}) {
-	if str, ok := val.(string); ok {
-		fmt.Printf("\"%s\"", str)
-	} else {
+	switch val := val.(type) {
+	case string:
+		fmt.Printf("\"%s\"", val)
+	case *Closure:
+		fmt.Printf("closure{")
+		fmt.Printf("addr: %d", val.Info.Addr)
+		fmt.Printf(", upvalues: [")
+		for i, upValue := range val.UpValues {
+			fmt.Printf("%v", *upValue)
+			if i != len(val.UpValues)-1 {
+				fmt.Printf(", ")
+			}
+		}
+		fmt.Printf("]}")
+	default:
 		fmt.Printf("%v", val)
 	}
+
 }
 
 func showInstruction(vm *VM, pc uint32) uint32 {
@@ -195,11 +243,17 @@ func showInstruction(vm *VM, pc uint32) uint32 {
 	case proto.INS_LOAD_FUNC:
 		fmt.Printf("LOAD_FUNC %d", getOpNum(vm, pc))
 		skip += 4
-	case proto.INS_LOAD_VALUE:
-		fmt.Printf("LOAD_VALUE %d", getOpNum(vm, pc))
+	case proto.INS_LOAD_ANONYMOUS:
+		fmt.Printf("LOAD_ANONYMOUS %d", getOpNum(vm, pc))
+		skip += 4
+	case proto.INS_LOAD_UPVALUE:
+		fmt.Printf("LOAD_UPVALUE %d", getOpNum(vm, pc))
 		skip += 4
 	case proto.INS_STORE_NAME:
 		fmt.Printf("STORE_NAME %d", getOpNum(vm, pc))
+		skip += 4
+	case proto.INS_STORE_UPVALUE:
+		fmt.Printf("STORE_UPVALUE %d", getOpNum(vm, pc))
 		skip += 4
 	case proto.INS_PUSH_NAME_NIL:
 		fmt.Printf("PUSH_NAME_NIL")
