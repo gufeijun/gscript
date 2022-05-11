@@ -73,8 +73,17 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 }
 
 func genFuncLiteralExp(exp *ast.FuncLiteralExp, ctx *Context) {
-	ctx.ft.addFuncLiteral(&exp.FuncLiteral, ctx.parser)
-	ctx.insLoadFunc(uint32(len(ctx.ft.funcTable) - 1))
+	idx := uint32(len(ctx.ft.anonymousFuncs))
+	ctx.ft.anonymousFuncs = append(ctx.ft.anonymousFuncs, proto.AnonymousFuncProto{
+		Info: &proto.BasicInfo{
+			VaArgs:     exp.VaArgs != "",
+			Parameters: exp.Parameters,
+		},
+	})
+	ctx.ft.anonymousFuncTexts = append(ctx.ft.anonymousFuncTexts, nil)
+	ctx.frame.nowParsingAnonymous = int(idx)
+	ctx.insLoadAnonymous(idx)
+	genFuncLiteral(&exp.FuncLiteral, ctx, idx, true)
 }
 
 func genFuncCallExp(exp *ast.FuncCallExp, ctx *Context, retCnt int) {
@@ -84,19 +93,21 @@ func genFuncCallExp(exp *ast.FuncCallExp, ctx *Context, retCnt int) {
 }
 
 func genTernaryOpExp(exp *ast.TernaryOpExp, ctx *Context) {
+	// TODO
 	genExp(exp.Exp1, ctx, 1)
 	ctx.writeIns(proto.INS_JUMP_IF)
 	ctx.writeUint(0) // to determine steps to jump
-	old := uint32(len(ctx.buf))
+	old := uint32(len(ctx.frame.text))
 	genExp(exp.Exp3, ctx, 1)
 	ctx.writeIns(proto.INS_JUMP_REL)
 	ctx.writeUint(0) // to determine steps to jump
-	now := uint32(len(ctx.buf))
+	now := uint32(len(ctx.frame.text))
 	genExp(exp.Exp2, ctx, 1)
-	last := uint32(len(ctx.buf))
+	last := uint32(len(ctx.frame.text))
 
-	binary.LittleEndian.PutUint32(ctx.buf[old-4:old], now-old)
-	binary.LittleEndian.PutUint32(ctx.buf[now-4:now], last-now)
+	// TODO
+	binary.LittleEndian.PutUint32(ctx.frame.text[old-4:old], now-old)
+	binary.LittleEndian.PutUint32(ctx.frame.text[now-4:now], last-now)
 }
 
 func genBinOpExp(exp *ast.BinOpExp, ctx *Context) {
