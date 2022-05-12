@@ -102,9 +102,10 @@ type IfStmt struct {
 }
 
 type ClassStmt struct {
-	Name      string
-	AttrName  []string
-	AttrValue []Exp
+	Name        string
+	AttrName    []string
+	AttrValue   []Exp
+	Constructor Exp
 }
 
 type EnumStmt struct {

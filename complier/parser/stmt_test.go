@@ -520,7 +520,7 @@ return {a:1,b:2};
 
 func TestClassStmt(t *testing.T) {
 	srcs := []string{
-		// `class A{}`,
+		`class A{}`,
 		`
 class A{
 	__self(){
@@ -534,10 +534,9 @@ class A{
 }`,
 	}
 	wants := []*ClassStmt{
-		// {"A", nil, nil},
-		{"A", []string{"__self", "name", "show"}, []Exp{&FuncLiteralExp{
-			FuncLiteral{nil, "", Block{[]BlockStmt{NewParser(newLexer("this.age = 10")).parseVarOpOrLabel()}}}},
-			&StringLiteralExp{"jack"}, &FuncLiteralExp{FuncLiteral{nil, "", Block{}}}}},
+		{"A", nil, nil, nil},
+		{"A", []string{"name", "show"}, []Exp{&StringLiteralExp{"jack"}, &FuncLiteralExp{FuncLiteral{nil, "", Block{}}}},
+			&FuncLiteralExp{FuncLiteral{nil, "", Block{[]BlockStmt{NewParser(newLexer("this.age = 10")).parseVarOpOrLabel()}}}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
