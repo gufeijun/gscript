@@ -77,7 +77,7 @@ func (p *Parser) parseVarDeclStmt() (stmt *ast.VarDeclStmt) {
 func (p *Parser) parseVarOpOrLabel() ast.Stmt {
 	name := p.l.NextToken().Content
 	if p.l.ConsumeIf(TOKEN_SEP_COLON) { // case4
-		label := &ast.LabelStmt{name}
+		label := &ast.LabelStmt{Name: name}
 		return label
 	}
 	v := p._parseVar(name)
@@ -127,7 +127,7 @@ func _incOrDec2Assign(kind int, v ast.Var) (stmt *ast.VarAssignStmt) {
 	return &ast.VarAssignStmt{
 		AssignOp: op,
 		Lefts:    []ast.Var{v},
-		Rights:   []ast.Exp{&ast.NumberLiteralExp{int64(1)}},
+		Rights:   []ast.Exp{&ast.NumberLiteralExp{Value: int64(1)}},
 	}
 }
 
@@ -156,7 +156,7 @@ func (p *Parser) parseAttrTail() (exps []ast.Exp) {
 			p.l.NextToken()
 			// a.b ==> a["b"]
 			token := p.l.NextTokenKind(TOKEN_IDENTIFIER)
-			exps = append(exps, &ast.StringLiteralExp{token.Content})
+			exps = append(exps, &ast.StringLiteralExp{Value: token.Content})
 		case TOKEN_SEP_LBRACK: //[
 			p.l.NextToken()
 			exps = append(exps, parseExp(p))
@@ -186,28 +186,6 @@ func (p *Parser) parseSwitchStmt() (stmt *ast.SwitchStmt) {
 	}
 	p.l.NextTokenKind(TOKEN_SEP_RCURLY) // }
 	return
-}
-
-func isConstLiteral(token *Token) bool {
-	return token.Kind == TOKEN_KW_TRUE || token.Kind == TOKEN_KW_FALSE ||
-		token.Kind == TOKEN_STRING || token.Kind == TOKEN_NUMBER
-}
-
-func (p *Parser) parseConstLiterals() (literals []interface{}) {
-	literals = append(literals, p.parseConstLiteral())
-	for p.l.Expect(TOKEN_SEP_COMMA) {
-		p.l.NextToken()
-		literals = append(literals, p.parseConstLiteral())
-	}
-	return
-}
-
-func (p *Parser) parseConstLiteral() interface{} {
-	token := p.l.NextToken()
-	if !isConstLiteral(token) {
-		panic(p.l.Line())
-	}
-	return token.Value
 }
 
 func (p *Parser) parseEnumStmt() (stmt *ast.EnumStmt) {
@@ -253,7 +231,7 @@ func (p *Parser) parseClassStmt() (stmt *ast.ClassStmt) {
 		attr := p.l.NextToken().Content
 		if p.l.Expect(TOKEN_SEP_LPAREN) {
 			stmt.AttrName = append(stmt.AttrName, attr)
-			stmt.AttrValue = append(stmt.AttrValue, &ast.FuncLiteralExp{p.parseFuncLiteral()})
+			stmt.AttrValue = append(stmt.AttrValue, &ast.FuncLiteralExp{FuncLiteral: p.parseFuncLiteral()})
 		} else if p.l.ConsumeIf(TOKEN_OP_ASSIGN) {
 			value := parseExp(p)
 			stmt.AttrName = append(stmt.AttrName, attr)
@@ -266,14 +244,6 @@ func (p *Parser) parseClassStmt() (stmt *ast.ClassStmt) {
 
 	p.l.NextTokenKind(TOKEN_SEP_RCURLY)
 	p.ClassStmts = append(p.ClassStmts, stmt)
-	return
-}
-
-func (p *Parser) parseClassBody() (attr string, value ast.Exp) {
-	attr = p.l.NextToken().Content
-	if p.l.ConsumeIf(TOKEN_OP_ASSIGN) {
-		value = parseExp(p)
-	}
 	return
 }
 
