@@ -242,13 +242,21 @@ func (p *Parser) parseClassStmt() (stmt *ast.ClassStmt) {
 
 	for p.l.Expect(TOKEN_IDENTIFIER) {
 		attr := p.l.NextToken().Content
+		var exp ast.Exp
 		if p.l.Expect(TOKEN_SEP_LPAREN) {
-			stmt.AttrName = append(stmt.AttrName, attr)
-			stmt.AttrValue = append(stmt.AttrValue, &ast.FuncLiteralExp{FuncLiteral: p.parseFuncLiteral()})
+			exp = &ast.FuncLiteralExp{FuncLiteral: p.parseFuncLiteral()}
 		} else if p.l.ConsumeIf(TOKEN_OP_ASSIGN) {
-			value := parseExp(p)
+			exp = parseExp(p)
+		}
+		if attr == "__self" {
+			_exp, ok := exp.(*ast.FuncLiteralExp)
+			if !ok {
+				panic("__self needs to be a function")
+			}
+			stmt.Constructor = _exp
+		} else if exp != nil {
 			stmt.AttrName = append(stmt.AttrName, attr)
-			stmt.AttrValue = append(stmt.AttrValue, value)
+			stmt.AttrValue = append(stmt.AttrValue, exp)
 		}
 		if p.l.Expect(TOKEN_SEP_SEMI) || p.l.Expect(TOKEN_SEP_COMMA) {
 			p.l.NextToken()
