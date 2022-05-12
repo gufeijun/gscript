@@ -9,7 +9,7 @@ func (p *Parser) parseProgram() *ast.Program {
 	return &ast.Program{
 		File:       p.l.SrcFile(),
 		Imports:    p.parseImports(),
-		BlockStmts: p.parseBlockStmts(),
+		BlockStmts: p.parseBlockStmts(true),
 		Export:     p.parseExport(),
 	}
 }
@@ -62,7 +62,7 @@ func (p *Parser) parseImport() (ipt ast.Import) {
 	}
 }
 
-func (p *Parser) parseBlockStmts() []ast.BlockStmt {
+func (p *Parser) parseBlockStmts(atTop bool) []ast.BlockStmt {
 	var blockStmts []ast.BlockStmt
 	for {
 		switch p.l.LookAhead().Kind {
@@ -71,14 +71,14 @@ func (p *Parser) parseBlockStmts() []ast.BlockStmt {
 		case TOKEN_KW_EXPORT, TOKEN_EOF, TOKEN_KW_CASE, TOKEN_KW_DEFAULT, TOKEN_SEP_RCURLY:
 			return blockStmts
 		default:
-			blockStmts = append(blockStmts, p.parseStmt())
+			blockStmts = append(blockStmts, p.parseStmt(atTop))
 		}
 	}
 }
 
 func (p *Parser) parseBlock() (block ast.Block) {
 	p.l.NextTokenKind(TOKEN_SEP_LCURLY)
-	block.Blocks = p.parseBlockStmts()
+	block.Blocks = p.parseBlockStmts(false)
 	p.l.NextTokenKind(TOKEN_SEP_RCURLY)
 	p.l.ConsumeIf(TOKEN_SEP_SEMI)
 	return block

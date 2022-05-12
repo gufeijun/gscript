@@ -5,7 +5,7 @@ import (
 	. "gscript/complier/lexer"
 )
 
-func (p *Parser) parseStmt() ast.Stmt {
+func (p *Parser) parseStmt(atTop bool) ast.Stmt {
 	var stmt ast.Stmt
 	switch p.l.LookAhead().Kind {
 	case TOKEN_KW_CONST, TOKEN_KW_LET:
@@ -14,6 +14,11 @@ func (p *Parser) parseStmt() ast.Stmt {
 		stmt = p.parseVarOpOrLabel()
 	case TOKEN_KW_FUNC:
 		stmt = p.parseFunc()
+		if !atTop {
+			if _stmt, ok := stmt.(*ast.FuncDefStmt); ok {
+				stmt = toVarDeclStmt(_stmt)
+			}
+		}
 	case TOKEN_KW_BREAK:
 		stmt = p.parseBreakStmt()
 	case TOKEN_KW_CONTINUE:
@@ -45,6 +50,14 @@ func (p *Parser) parseStmt() ast.Stmt {
 	}
 	p.l.ConsumeIf(TOKEN_SEP_SEMI)
 	return stmt
+}
+
+func toVarDeclStmt(stmt *ast.FuncDefStmt) ast.Stmt {
+	varDecl := new(ast.VarDeclStmt)
+	varDecl.Const = true
+	varDecl.Lefts = []string{stmt.Name}
+	varDecl.Rights = []ast.Exp{&ast.FuncLiteralExp{FuncLiteral: stmt.FuncLiteral}}
+	return varDecl
 }
 
 // varDeclStmt ::= (const|let) id {,id} = exp {,exp} ;
@@ -177,12 +190,12 @@ func (p *Parser) parseSwitchStmt() (stmt *ast.SwitchStmt) {
 	for p.l.ConsumeIf(TOKEN_KW_CASE) {
 		stmt.Cases = append(stmt.Cases, parseExpList(p))
 		p.l.NextTokenKind(TOKEN_SEP_COLON) // :
-		stmt.Blocks = append(stmt.Blocks, p.parseBlockStmts())
+		stmt.Blocks = append(stmt.Blocks, p.parseBlockStmts(false))
 	}
 
 	if p.l.ConsumeIf(TOKEN_KW_DEFAULT) { // default
 		p.l.NextTokenKind(TOKEN_SEP_COLON)
-		stmt.Default = p.parseBlockStmts()
+		stmt.Default = p.parseBlockStmts(false)
 	}
 	p.l.NextTokenKind(TOKEN_SEP_RCURLY) // }
 	return
@@ -253,7 +266,7 @@ func (p *Parser) parseBlockStmt() (stmt ast.Block) {
 	case TOKEN_SEP_LCURLY:
 		return p.parseBlock()
 	default:
-		stmt.Blocks = append(stmt.Blocks, p.parseStmt())
+		stmt.Blocks = append(stmt.Blocks, p.parseStmt(false))
 		return
 	}
 }
