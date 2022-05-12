@@ -12,20 +12,47 @@ func Gen(parser *parser.Parser) (_proto proto.Proto) {
 	prog := parser.Parse()
 	ctx := newContext(parser)
 
-	// make all enum statements global
+	// make all enum and class statements global
 	genEnumStmt(parser.EnumStmts, ctx)
+	genClassStmts(parser.ClassStmts, ctx)
 
 	genBlockStmts(prog.BlockStmts, ctx)
 	ctx.writeIns(proto.INS_STOP)
 
-	// merge bytes codes of functions together
-	mergeFuncCodes(ctx)
-
 	return proto.Proto{
-		Text:           *(*[]proto.Instruction)((unsafe.Pointer(&ctx.frame.text))),
+		Text:           bytesToInstructions(ctx.frame.text),
 		Consts:         ctx.ct.Constants,
 		Funcs:          ctx.ft.funcTable,
 		AnonymousFuncs: ctx.ft.anonymousFuncs,
+	}
+}
+
+func genClassStmts(stmts []*ast.ClassStmt, ctx *Context) {
+	for i, stmt := range stmts {
+		genClassStmt(stmt, ctx)
+		ctx.ft.anonymousFuncs[i].Info.Text = bytesToInstructions(ctx.frame.text)
+		ctx.frame = newStackFrame()
+	}
+}
+
+func genClassStmt(stmt *ast.ClassStmt, ctx *Context) {
+	__self := stmt.Constructor
+	if __self != nil {
+		collectArgs(&__self.FuncLiteral, ctx)
+	}
+	ctx.insCopyName("this")
+	for i := range stmt.AttrName {
+		ctx.insLoadConst(stmt.AttrName[i])
+		genExp(stmt.AttrValue[i], ctx, 1)
+		ctx.writeIns(proto.INS_STORE_KV)
+	}
+
+	// codes of __self
+	if __self != nil {
+		genBlockStmts(__self.Block.Blocks, ctx)
+	}
+	if !ctx.frame.returnAtEnd {
+		genReturnStmt(&ast.ReturnStmt{}, ctx)
 	}
 }
 
@@ -90,14 +117,18 @@ func genFuncDefStmt(stmt *ast.FuncDefStmt, ctx *Context) {
 	genFuncLiteral(&stmt.FuncLiteral, ctx, funcIdx, false)
 }
 
-func genFuncLiteral(literal *ast.FuncLiteral, ctx *Context, idx uint32, anonymous bool) {
-	ctx.pushFrame(anonymous, int(idx))
+func collectArgs(literal *ast.FuncLiteral, ctx *Context) {
 	if literal.VaArgs != "" {
 		ctx.insPushName(literal.VaArgs)
 	}
 	for i := len(literal.Parameters) - 1; i >= 0; i-- {
 		ctx.insPushName(literal.Parameters[i].Name)
 	}
+}
+
+func genFuncLiteral(literal *ast.FuncLiteral, ctx *Context, idx uint32, anonymous bool) {
+	ctx.pushFrame(anonymous, int(idx))
+	collectArgs(literal, ctx)
 	genBlockStmts(literal.Block.Blocks, ctx)
 	if !ctx.frame.returnAtEnd {
 		genReturnStmt(&ast.ReturnStmt{}, ctx)
@@ -106,19 +137,23 @@ func genFuncLiteral(literal *ast.FuncLiteral, ctx *Context, idx uint32, anonymou
 	bindUpValue(ctx, idx, anonymous)
 }
 
+func bytesToInstructions(text []byte) []proto.Instruction {
+	return *((*[]proto.Instruction)(unsafe.Pointer(&text)))
+}
+
 func bindUpValue(ctx *Context, funcIdx uint32, anonymous bool) {
 	oldFrame := ctx.popFrame()
 	upValues := oldFrame.vt.upValues
 
 	if anonymous {
-		ctx.ft.anonymousFuncTexts[ctx.frame.nowParsingAnonymous] = oldFrame.text
+		ctx.ft.anonymousFuncs[ctx.frame.nowParsingAnonymous].Info.Text = bytesToInstructions(oldFrame.text)
 		ft := ctx.ft.anonymousFuncs
 		for _, upValue := range upValues {
 			vptr := getUpValueIdx(ctx.frame, ctx, &upValue)
 			ft[funcIdx].UpValues = append(ft[funcIdx].UpValues, vptr)
 		}
 	} else {
-		ctx.ft.funcTexts = append(ctx.ft.funcTexts, oldFrame.text)
+		ctx.ft.funcTable[funcIdx].Info.Text = bytesToInstructions(oldFrame.text)
 		ft := ctx.ft.funcTable
 		for _, upValue := range upValues {
 			ft[funcIdx].UpValues = append(ft[funcIdx].UpValues, upValue.nameIdx)
@@ -465,6 +500,11 @@ func genVarDeclStmt(stmt *ast.VarDeclStmt, ctx *Context) {
 	}
 }
 
+func needRotate(op int) bool {
+	return op == ast.ASIGN_OP_SUBEQ ||
+		op == ast.ASIGN_OP_DIVEQ || op == ast.ASIGN_OP_MODEQ
+}
+
 func genVarAssignStmt(stmt *ast.VarAssignStmt, ctx *Context) {
 	genExps(stmt.Rights, ctx, len(stmt.Lefts))
 
@@ -474,7 +514,9 @@ func genVarAssignStmt(stmt *ast.VarAssignStmt, ctx *Context) {
 		if length == 0 {
 			if stmt.AssignOp != ast.ASIGN_OP_ASSIGN {
 				genExp(&ast.NameExp{Name: target.Prefix}, ctx, 1)
-				ctx.writeIns(proto.INS_ROT_TWO)
+				if needRotate(stmt.AssignOp) {
+					ctx.writeIns(proto.INS_ROT_TWO)
+				}
 				ctx.writeIns(byte(stmt.AssignOp-ast.ASIGN_OP_ASSIGN) + proto.INS_BINARY_START)
 			}
 			ctx.insStoreName(target.Prefix)
@@ -499,18 +541,6 @@ func genStmtsWithBlock(stmts []ast.BlockStmt, ctx *Context) {
 	size := *ctx.frame.nt.nameIdx
 	varDecl := genBlockStmts(stmts, ctx)
 	ctx.leaveBlock(size, varDecl)
-}
-
-// TODO can optimize
-func mergeFuncCodes(ctx *Context) {
-	for i := 0; i < len(ctx.ft.funcTexts); i++ {
-		ctx.ft.funcTable[i].Info.Addr = ctx.textSize()
-		ctx.frame.text = append(ctx.frame.text, ctx.ft.funcTexts[i]...)
-	}
-	for i := 0; i < len(ctx.ft.anonymousFuncs); i++ {
-		ctx.ft.anonymousFuncs[i].Info.Addr = ctx.textSize()
-		ctx.frame.text = append(ctx.frame.text, ctx.ft.anonymousFuncTexts[i]...)
-	}
 }
 
 func genEnumStmt(stmts []*ast.EnumStmt, ctx *Context) {
