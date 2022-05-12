@@ -10,7 +10,7 @@ import (
 func genExps(exps []ast.Exp, ctx *Context, wantCnt int) {
 	if len(exps) == 0 {
 		for i := 0; i < wantCnt; i++ {
-			ctx.insLoadConst(nil)
+			ctx.insLoadNil()
 		}
 		return
 	}
@@ -48,7 +48,8 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 		genFuncLiteralExp(exp, ctx)
 		retCnt--
 	case *ast.NewObjectExp:
-		// TODO
+		genNewObjectExp(exp, ctx)
+		retCnt--
 	case *ast.NameExp:
 		genNameExp(exp, ctx)
 		retCnt--
@@ -68,8 +69,15 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 		panic(fmt.Sprintf("do not support exp: %v", exp))
 	}
 	for i := 0; i < retCnt; i++ {
-		ctx.insLoadConst(nil)
+		ctx.insLoadNil()
 	}
+}
+
+func genNewObjectExp(exp *ast.NewObjectExp, ctx *Context) {
+	ctx.writeIns(proto.INS_NEW_EMPTY_MAP)
+	genExps(exp.Args, ctx, len(exp.Args))
+	ctx.insLoadAnonymous(ctx.classes[exp.Name])
+	ctx.insCall(0, byte(len(exp.Args)))
 }
 
 func genFuncLiteralExp(exp *ast.FuncLiteralExp, ctx *Context) {
@@ -80,7 +88,6 @@ func genFuncLiteralExp(exp *ast.FuncLiteralExp, ctx *Context) {
 			Parameters: exp.Parameters,
 		},
 	})
-	ctx.ft.anonymousFuncTexts = append(ctx.ft.anonymousFuncTexts, nil)
 	ctx.frame.nowParsingAnonymous = int(idx)
 	ctx.insLoadAnonymous(idx)
 	genFuncLiteral(&exp.FuncLiteral, ctx, idx, true)
@@ -159,12 +166,12 @@ func genMapLiteralExp(exp *ast.MapLiteralExp, ctx *Context) {
 		ctx.insLoadConst(key)
 		genExp(exp.Vals[i], ctx, 1)
 	}
-	ctx.writeIns(proto.INS_MAP_NEW)
+	ctx.writeIns(proto.INS_NEW_MAP)
 	ctx.writeUint(uint32(len(exp.Keys)))
 }
 
 func genNilExp(exp *ast.NilExp, ctx *Context) {
-	ctx.insLoadConst(nil)
+	ctx.insLoadNil()
 }
 
 func genNumberLiteralExp(exp *ast.NumberLiteralExp, ctx *Context) {
