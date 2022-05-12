@@ -105,7 +105,7 @@ type ClassStmt struct {
 	Name        string
 	AttrName    []string
 	AttrValue   []Exp
-	Constructor Exp
+	Constructor *FuncLiteralExp
 }
 
 type EnumStmt struct {
