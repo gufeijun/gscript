@@ -8,10 +8,8 @@ import (
 type FuncTable struct {
 	funcTable []proto.FuncProto // index -> proto
 	funcMap   map[string]uint32 // funcname -> index
-	funcTexts [][]byte          // index -> bytes code
 
-	anonymousFuncs     []proto.AnonymousFuncProto
-	anonymousFuncTexts [][]byte
+	anonymousFuncs []proto.AnonymousFuncProto
 }
 
 func newFuncTable(funcs []*ast.FuncDefStmt) *FuncTable {
