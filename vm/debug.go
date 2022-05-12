@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gscript/proto"
 	"os"
+	"strconv"
 	"strings"
 	"unsafe"
 )
@@ -23,6 +24,7 @@ var cmds = map[string]func(vm *VM, args []string){
 	"const":   debugShowConstant,
 	"r":       debugRun,
 	"f":       debugShowFunc,
+	"ff":      debugShowAnonymousFunc,
 	"upvalue": debugShowUpValue,
 }
 
@@ -37,24 +39,53 @@ func debugShowUpValue(vm *VM, args []string) {
 	fmt.Println()
 }
 
-func debugShowFunc(vm *VM, args []string) {
-	fmt.Printf("functions: ")
-	for i, f := range vm.funcTable {
-		fmt.Printf("{")
-		fmt.Printf("addr: %d, ", f.Info.Addr)
-		fmt.Printf("upvalues: [")
-		if upvalues, ok := f.UpValueTable.([]*GsValue); ok {
-			for i, v := range upvalues {
-				fmt.Printf("%v", v.value)
-				if i != len(upvalues)-1 {
-					fmt.Printf(", ")
-				}
-			}
-		}
-		fmt.Printf("]}")
-		if i != len(vm.funcTable)-1 {
+func showFunc(upValues []*GsValue) {
+	fmt.Printf("upvalues: [")
+	for i, upValue := range upValues {
+		showValue(upValue.value)
+		if i != len(upValues)-1 {
 			fmt.Printf(", ")
 		}
+	}
+	fmt.Printf("]\n")
+}
+
+func debugShowAnonymousFunc(vm *VM, args []string) {
+	if len(args) == 0 {
+		return
+	}
+	num, err := strconv.Atoi(args[0])
+	if err != nil {
+		return
+	}
+	f := vm.anonymousTable[num]
+	cnt := -1
+	if len(args) > 1 {
+		fmt.Scanf("%d", &cnt)
+	}
+	showCode(vm, f.Info.Text, 0, cnt)
+}
+
+func debugShowFunc(vm *VM, args []string) {
+	if len(args) != 0 {
+		num, err := strconv.Atoi(args[0])
+		if err != nil || num >= len(vm.funcTable) {
+			return
+		}
+		f := vm.funcTable[num]
+		upValues, _ := f.UpValueTable.([]*GsValue)
+		showFunc(upValues)
+		cnt := -1
+		if len(args) > 1 {
+			fmt.Scanf("%d", &cnt)
+		}
+		showCode(vm, f.Info.Text, 0, cnt)
+		return
+	}
+	for i, f := range vm.funcTable {
+		fmt.Printf("%dth: ", i)
+		upValues, _ := f.UpValueTable.([]*GsValue)
+		showFunc(upValues)
 	}
 	fmt.Println()
 }
@@ -72,33 +103,33 @@ func debugShowConstant(vm *VM, args []string) {
 
 func debugRun(vm *VM, args []string) {
 	for {
-		instruction := vm.text[vm.pc]
+		instruction := vm.frame.text[vm.frame.pc]
 		if instruction == proto.Instruction(proto.INS_STOP) {
 			break
 		}
-		vm.pc++
+		vm.frame.pc++
 		Execute(vm, instruction)
 	}
 }
 
 func debugShowCode(vm *VM, args []string) {
 	cnt := 15
-	start := vm.pc
+	start := vm.frame.pc
 	if len(args) > 0 {
 		fmt.Sscanf(args[0], "%d", &start)
 	}
 	if len(args) > 1 {
 		fmt.Sscanf(args[1], "%d", &cnt)
 	}
-	showCode(vm, start, cnt)
+	showCode(vm, vm.frame.text, start, cnt)
 }
 
-func showCode(vm *VM, pc uint32, cnt int) {
-	for i := 0; i < cnt; i++ {
-		pc += showInstruction(vm, pc)
-		if int(pc) >= len(vm.text) {
+func showCode(vm *VM, text []proto.Instruction, pc uint32, cnt int) {
+	for i := 0; ; i++ {
+		if int(pc) >= len(text) || i == cnt {
 			break
 		}
+		pc += showInstruction(vm, text, pc)
 	}
 }
 
@@ -124,8 +155,8 @@ func debugShowVar(vm *VM, args []string) {
 }
 
 func debugNext(vm *VM, args []string) {
-	instruction := vm.text[vm.pc]
-	vm.pc++
+	instruction := vm.frame.text[vm.frame.pc]
+	vm.frame.pc++
 	Execute(vm, instruction)
 }
 
@@ -165,8 +196,7 @@ func showValue(val interface{}) {
 		fmt.Printf("\"%s\"", val)
 	case *Closure:
 		fmt.Printf("closure{")
-		fmt.Printf("addr: %d", val.Info.Addr)
-		fmt.Printf(", upvalues: [")
+		fmt.Printf("upvalues: [")
 		for i, upValue := range val.UpValues {
 			fmt.Printf("%v", *upValue)
 			if i != len(val.UpValues)-1 {
@@ -180,12 +210,9 @@ func showValue(val interface{}) {
 
 }
 
-func showInstruction(vm *VM, pc uint32) uint32 {
+func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 	skip := 1
-	ins := byte(vm.text[pc])
-	if pc == vm.pc {
-		fmt.Printf("->")
-	}
+	ins := byte(text[pc])
 	fmt.Printf("%d	\t", pc)
 	switch ins {
 	case proto.INS_UNARY_NOT:
@@ -234,55 +261,63 @@ func showInstruction(vm *VM, pc uint32) uint32 {
 		fmt.Printf("LOR")
 	case proto.INS_BINARY_ATTR:
 		fmt.Printf("ATTR")
+	case proto.INS_LOAD_NIL:
+		fmt.Printf("LOAD_NIL")
 	case proto.INS_LOAD_CONST:
-		fmt.Printf("LOAD_CONST %v", vm.constTable[getOpNum(vm, pc)])
+		fmt.Printf("LOAD_CONST %v", vm.constTable[getOpNum(text, pc)])
 		skip += 4
 	case proto.INS_LOAD_NAME:
-		fmt.Printf("LOAD_NAME %d", getOpNum(vm, pc))
+		fmt.Printf("LOAD_NAME %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_LOAD_FUNC:
-		fmt.Printf("LOAD_FUNC %d", getOpNum(vm, pc))
+		fmt.Printf("LOAD_FUNC %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_LOAD_ANONYMOUS:
-		fmt.Printf("LOAD_ANONYMOUS %d", getOpNum(vm, pc))
+		fmt.Printf("LOAD_ANONYMOUS %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_LOAD_UPVALUE:
-		fmt.Printf("LOAD_UPVALUE %d", getOpNum(vm, pc))
+		fmt.Printf("LOAD_UPVALUE %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_STORE_NAME:
-		fmt.Printf("STORE_NAME %d", getOpNum(vm, pc))
+		fmt.Printf("STORE_NAME %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_STORE_UPVALUE:
-		fmt.Printf("STORE_UPVALUE %d", getOpNum(vm, pc))
+		fmt.Printf("STORE_UPVALUE %d", getOpNum(text, pc))
 		skip += 4
+	case proto.INS_STORE_KV:
+		fmt.Printf("STORE_KV")
 	case proto.INS_PUSH_NAME_NIL:
 		fmt.Printf("PUSH_NAME_NIL")
 	case proto.INS_CALL:
 		pc++
-		wantRtnCnt := byte(vm.text[pc])
+		wantRtnCnt := byte(vm.frame.text[pc])
 		pc++
-		argCnt := byte(vm.text[pc])
+		argCnt := byte(vm.frame.text[pc])
 		fmt.Printf("CALL %d %d", wantRtnCnt, argCnt)
 		skip += 2
 	case proto.INS_RETURN:
-		fmt.Printf("RETURN with %d values", getOpNum(vm, pc))
+		fmt.Printf("RETURN with %d values", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_PUSH_NAME:
 		fmt.Printf("PUSH_NAME")
+	case proto.INS_COPY_NAME:
+		fmt.Printf("COPY_NAME")
 	case proto.INS_RESIZE_NAMETABLE:
-		fmt.Printf("RESIZE_NAMETABLE %d", getOpNum(vm, pc))
+		fmt.Printf("RESIZE_NAMETABLE %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_POP_TOP:
 		fmt.Printf("POP_TOP")
 	case proto.INS_STOP:
 		fmt.Printf("STOP")
 	case proto.INS_SLICE_NEW:
-		fmt.Printf("SLICE_NEW %d", getOpNum(vm, pc))
+		fmt.Printf("SLICE_NEW %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_SLICE_APPEND:
 		fmt.Printf("SLICE_APPEND")
-	case proto.INS_MAP_NEW:
-		fmt.Printf("MAP_NEW %d", getOpNum(vm, pc))
+	case proto.INS_NEW_EMPTY_MAP:
+		fmt.Printf("NEW_EMPTY_MAP")
+	case proto.INS_NEW_MAP:
+		fmt.Printf("MAP_NEW %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_ATTR_ASSIGN:
 		fmt.Printf("ATTR_ASSIGN")
@@ -305,16 +340,16 @@ func showInstruction(vm *VM, pc uint32) uint32 {
 	case proto.INS_ATTR_ACCESS:
 		fmt.Printf("ATTR_ACCESS")
 	case proto.INS_JUMP_REL:
-		fmt.Printf("JUMP_REL %d", getOpNum(vm, pc))
+		fmt.Printf("JUMP_REL %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_JUMP_ABS:
-		fmt.Printf("JUMP_ABS %d", getOpNum(vm, pc))
+		fmt.Printf("JUMP_ABS %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_JUMP_IF:
-		fmt.Printf("JUMP_IF %d", getOpNum(vm, pc))
+		fmt.Printf("JUMP_IF %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_JUMP_CASE:
-		fmt.Printf("JUMP_CASE %d", getOpNum(vm, pc))
+		fmt.Printf("JUMP_CASE %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_ROT_TWO:
 		fmt.Printf("ROT_TWO")
@@ -323,9 +358,9 @@ func showInstruction(vm *VM, pc uint32) uint32 {
 	return uint32(skip)
 }
 
-func getOpNum(vm *VM, pc uint32) uint32 {
+func getOpNum(text []proto.Instruction, pc uint32) uint32 {
 	pc++
-	_data := vm.text[pc : pc+4]
+	_data := text[pc : pc+4]
 	data := *(*[]byte)(unsafe.Pointer((uintptr(unsafe.Pointer(&_data)))))
 	return binary.LittleEndian.Uint32(data)
 }

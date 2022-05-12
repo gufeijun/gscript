@@ -29,6 +29,7 @@ var actions = []func(vm *VM){
 	actionBinaryLAND,
 	actionBinaryLOR,
 	actionBinaryATTR,
+	actionLoadNil,
 	actionLoadConst,
 	actionLoadName,
 	actionLoadFunc,
@@ -36,14 +37,17 @@ var actions = []func(vm *VM){
 	actionLoadUpValue,
 	actionStoreName,
 	actionStoreUpValue,
+	actionStoreKV,
 	actionPushNameNil,
 	actionPushName,
+	actionCopyName,
 	actionResizeNameTable,
 	actionPopTop,
 	actionStop,
 	actionSliceNew,
 	actionSliceAppend,
-	actionMapNew,
+	actionNewMap,
+	actionNewEmptyMap,
 	actionAttrAssign,
 	actionAttrAssignAddEq,
 	actionAttrAssignSubEq,
@@ -198,6 +202,10 @@ func actionBinaryATTR(vm *VM) {
 	panic(fmt.Sprintf("do not support attr access for %T", obj))
 }
 
+func actionLoadNil(vm *VM) {
+	vm.stack.Push(nil)
+}
+
 func actionLoadConst(vm *VM) {
 	vm.stack.Push(vm.constTable[vm.getOpNum()])
 }
@@ -254,6 +262,18 @@ func actionStoreUpValue(vm *VM) {
 	vm.stack.Pop()
 }
 
+func actionStoreKV(vm *VM) {
+	obj, ok := vm.frame.symbolTable.top().(map[interface{}]interface{})
+	if !ok {
+		panic("STORE_KV: target is not an object") // TODO
+	}
+	val := vm.stack.Top()
+	vm.stack.Pop()
+	key := vm.stack.Top()
+	vm.stack.Pop()
+	obj[key] = val
+}
+
 func actionPushNameNil(vm *VM) {
 	vm.frame.symbolTable.pushSymbol(nil)
 }
@@ -261,6 +281,10 @@ func actionPushNameNil(vm *VM) {
 func actionPushName(vm *VM) {
 	vm.frame.symbolTable.pushSymbol(vm.stack.Top())
 	vm.stack.Pop()
+}
+
+func actionCopyName(vm *VM) {
+	vm.frame.symbolTable.pushSymbol(vm.stack.Top())
 }
 
 func actionResizeNameTable(vm *VM) {
@@ -302,7 +326,7 @@ func actionSliceAppend(vm *VM) {
 	panic("append operate for illegal type") // TODO
 }
 
-func actionMapNew(vm *VM) {
+func actionNewMap(vm *VM) {
 	m := make(map[interface{}]interface{})
 	cnt := vm.getOpNum()
 	for i := 0; i < int(cnt); i++ {
@@ -316,6 +340,10 @@ func actionMapNew(vm *VM) {
 		m[key] = val
 	}
 	vm.stack.Push(m)
+}
+
+func actionNewEmptyMap(vm *VM) {
+	vm.stack.Push(map[interface{}]interface{}{})
 }
 
 func actionAttrAssign(vm *VM) {
@@ -413,11 +441,11 @@ func actionAttrAccess(vm *VM) {
 
 func actionJumpRel(vm *VM) {
 	steps := vm.getOpNum()
-	vm.pc += steps
+	vm.frame.pc += steps
 }
 
 func actionJumpAbs(vm *VM) {
-	vm.pc = vm.getOpNum()
+	vm.frame.pc = vm.getOpNum()
 }
 
 func actionJumpIf(vm *VM) {
@@ -425,7 +453,7 @@ func actionJumpIf(vm *VM) {
 	vm.stack.Pop()
 	steps := vm.getOpNum()
 	if getBool(top) {
-		vm.pc += steps
+		vm.frame.pc += steps
 	}
 }
 
@@ -435,7 +463,7 @@ func actionJumpCase(vm *VM) {
 	switchCond := vm.stack.Top()
 	steps := vm.getOpNum()
 	if eqAction(caseCond, switchCond).(bool) {
-		vm.pc += steps
+		vm.frame.pc += steps
 	}
 }
 
@@ -443,17 +471,18 @@ func actionCall(vm *VM) {
 	_func := vm.stack.Top().(*Closure)
 	vm.stack.Pop()
 
-	wantRtnCnt := int(vm.text[vm.pc])
-	vm.pc++
-	argCnt := uint32(vm.text[vm.pc])
-	vm.pc++
+	wantRtnCnt := int(vm.frame.text[vm.frame.pc])
+	vm.frame.pc++
+	argCnt := uint32(vm.frame.text[vm.frame.pc])
+	vm.frame.pc++
 
 	// generate a new function call frame
 	frame := &stackFrame{
+		pc:          0,
 		prev:        vm.frame,
 		symbolTable: newSymbolTable(),
 		wantRetCnt:  wantRtnCnt,
-		returnAddr:  vm.pc,
+		text:        _func.Info.Text,
 		upValues:    _func.UpValues,
 	}
 	vm.frame = frame
@@ -483,9 +512,6 @@ func actionCall(vm *VM) {
 			argCnt--
 		}
 	}
-
-	// jump to function
-	vm.pc = _func.Info.Addr
 }
 
 func actionReturn(vm *VM) {
@@ -504,7 +530,6 @@ func actionReturn(vm *VM) {
 	if vm.frame.prev == nil {
 		vm.Stop()
 	}
-	vm.pc = vm.frame.returnAddr
 	vm.frame.symbolTable = nil
 	vm.frame = vm.frame.prev
 }
