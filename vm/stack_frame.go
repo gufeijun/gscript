@@ -6,8 +6,9 @@ type stackFrame struct {
 	prev        *stackFrame
 	symbolTable *symbolTable
 	wantRetCnt  int
-	returnAddr  uint32
+	pc          uint32
 	upValues    []*GsValue
+	text        []proto.Instruction
 }
 
 type Closure struct {
