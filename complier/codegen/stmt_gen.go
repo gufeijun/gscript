@@ -473,22 +473,22 @@ end:
 */
 func genIfStmt(stmt *ast.IfStmt, ctx *Context) {
 	var jf_addr_ptrs []int // jump_if
-	var ja_addr_ptrs []int // jump_abs
+	var jr_addr_ptrs []int // jump_rel
 	for _, condition := range stmt.Conditions {
 		genExp(condition, ctx, 1)
 		jf_addr_ptrs = append(jf_addr_ptrs, ctx.insJumpIf(0))
 	}
-	ja_addr_ptrs = append(ja_addr_ptrs, ctx.insJumpRel(0))
+	jr_addr_ptrs = append(jr_addr_ptrs, ctx.insJumpRel(0))
 	last := len(stmt.Blocks) - 1
 	for i := 0; i < len(stmt.Blocks); i++ {
 		ctx.setSteps(jf_addr_ptrs[i], ctx.textSize())
 		genBlock(stmt.Blocks[i], ctx)
 		if i != last {
-			ja_addr_ptrs = append(ja_addr_ptrs, ctx.insJumpRel(0))
+			jr_addr_ptrs = append(jr_addr_ptrs, ctx.insJumpRel(0))
 		}
 	}
 	end := ctx.textSize()
-	for _, pos := range ja_addr_ptrs {
+	for _, pos := range jr_addr_ptrs {
 		ctx.setSteps(pos, end)
 	}
 }
