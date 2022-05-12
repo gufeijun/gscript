@@ -29,3 +29,7 @@ func (st *symbolTable) setValue(idx uint32, val interface{}) {
 func (st *symbolTable) pushSymbol(val interface{}) {
 	st.values = append(st.values, &GsValue{val})
 }
+
+func (st *symbolTable) top() (val interface{}) {
+	return st.values[len(st.values)-1].value
+}

@@ -8,11 +8,9 @@ import (
 
 type VM struct {
 	stopped        bool
-	pc             uint32
 	topFrame       *stackFrame
 	frame          *stackFrame
 	stack          *evalStack
-	text           []proto.Instruction
 	constTable     []interface{}
 	funcTable      []proto.FuncProto
 	anonymousTable []proto.AnonymousFuncProto
@@ -20,11 +18,11 @@ type VM struct {
 
 func NewVM(_proto *proto.Proto) *VM {
 	topFrame := newFuncFrame()
+	topFrame.text = _proto.Text
 	return &VM{
 		topFrame:       topFrame,
 		frame:          topFrame,
 		stack:          newEvalStack(),
-		text:           _proto.Text,
 		constTable:     _proto.Consts,
 		funcTable:      _proto.Funcs,
 		anonymousTable: _proto.AnonymousFuncs,
@@ -36,8 +34,8 @@ func (vm *VM) Run() {
 		if vm.stopped {
 			break
 		}
-		instruction := vm.text[vm.pc]
-		vm.pc++
+		instruction := vm.frame.text[vm.frame.pc]
+		vm.frame.pc++
 		Execute(vm, instruction)
 	}
 }
@@ -47,8 +45,8 @@ func (vm *VM) Stop() {
 }
 
 func (vm *VM) getOpNum() uint32 {
-	arr := *(*[4]byte)(unsafe.Pointer(&vm.text[vm.pc]))
+	arr := *(*[4]byte)(unsafe.Pointer(&vm.frame.text[vm.frame.pc]))
 	v := binary.LittleEndian.Uint32(arr[:])
-	vm.pc += 4
+	vm.frame.pc += 4
 	return v
 }
