@@ -3,24 +3,45 @@ package codegen
 import (
 	"encoding/binary"
 	"fmt"
+	"gscript/complier/ast"
 	"gscript/complier/parser"
 	"gscript/proto"
 )
 
 type Context struct {
-	parser *parser.Parser
-	ct     *ConstTable
-	ft     *FuncTable
-	frame  *StackFrame
+	parser  *parser.Parser
+	ct      *ConstTable
+	ft      *FuncTable
+	classes map[string]uint32 // class name -> FuncTable index
+
+	frame *StackFrame
 }
 
 func newContext(parser *parser.Parser) *Context {
+	ft := newFuncTable(parser.FuncDefs)
 	return &Context{
-		parser: parser,
-		ct:     newConstTable(),
-		ft:     newFuncTable(parser.FuncDefs),
-		frame:  newStackFrame(),
+		parser:  parser,
+		ct:      newConstTable(),
+		ft:      ft,
+		classes: newClassTable(parser.ClassStmts, ft),
+		frame:   newStackFrame(),
 	}
+}
+
+func newClassTable(stmts []*ast.ClassStmt, ft *FuncTable) map[string]uint32 {
+	classes := map[string]uint32{}
+	ft.anonymousFuncs = make([]proto.AnonymousFuncProto, len(stmts))
+	for i, stmt := range stmts {
+		classes[stmt.Name] = uint32(i)
+		info := &proto.BasicInfo{}
+		__self := stmt.Constructor
+		if __self != nil {
+			info.Parameters = __self.Parameters
+			info.VaArgs = __self.VaArgs != ""
+		}
+		ft.anonymousFuncs[i].Info = info
+	}
+	return classes
 }
 
 func (ctx *Context) pushFrame(anonymous bool, idx int) {
@@ -47,6 +68,11 @@ func (ctx *Context) writeUint(idx uint32) {
 
 func (ctx *Context) writeByte(v byte) {
 	ctx.frame.text = append(ctx.frame.text, v)
+}
+
+func (ctx *Context) insCopyName(name string) {
+	ctx.writeIns(proto.INS_COPY_NAME)
+	ctx.frame.nt.Set(name)
 }
 
 func (ctx *Context) insPushName(name string) {
@@ -116,6 +142,10 @@ func (ctx *Context) insLoadConst(c interface{}) {
 	idx := ctx.ct.Get(c)
 	ctx.writeIns(proto.INS_LOAD_CONST)
 	ctx.writeUint(idx)
+}
+
+func (ctx *Context) insLoadNil() {
+	ctx.writeIns(proto.INS_LOAD_NIL)
 }
 
 func (ctx *Context) insLoadFunc(idx uint32) {
