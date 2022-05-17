@@ -501,7 +501,7 @@ func genVarDeclStmt(stmt *ast.VarDeclStmt, ctx *Context) {
 }
 
 func needRotate(op int) bool {
-	return op == ast.ASIGN_OP_SUBEQ ||
+	return op == ast.ASIGN_OP_SUBEQ || op == ast.ASIGN_OP_ADDEQ ||
 		op == ast.ASIGN_OP_DIVEQ || op == ast.ASIGN_OP_MODEQ
 }
 

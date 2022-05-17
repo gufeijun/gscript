@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"gscript/proto"
+	"strconv"
 )
 
 var actions = []func(vm *VM){
@@ -571,125 +572,158 @@ func boolToFloat(v bool) float64 {
 }
 
 func addAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, addInt, addFloat, addBool)
+	return binaryAction(v1, v2, addInt, addFloat, addBool, addString)
 }
 
 func subAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, subInt, subFloat, subBool)
+	return binaryAction(v1, v2, subInt, subFloat, subBool, nil)
 }
 
 func mulAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, mulInt, mulFloat, mulBool)
+	return binaryAction(v1, v2, mulInt, mulFloat, mulBool, nil)
 }
 
 func divAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, divInt, divFloat, divBool)
+	return binaryAction(v1, v2, divInt, divFloat, nil, nil)
 }
 
 func idivAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, idivInt, idivFloat, idivBool)
+	return binaryAction(v1, v2, idivInt, idivFloat, nil, nil)
 }
 
 func modAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, modInt, modFloat, modBool)
+	return binaryAction(v1, v2, modInt, modFloat, nil, nil)
 }
 
 func andAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, andInt, andFloat, andBool)
+	return binaryAction(v1, v2, andInt, nil, nil, nil)
 }
 
 func orAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, orInt, orFloat, orBool)
+	return binaryAction(v1, v2, orInt, nil, nil, nil)
 }
 
 func xorAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, xorInt, xorFloat, xorBool)
+	return binaryAction(v1, v2, xorInt, nil, nil, nil)
 }
 
 func shrAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, shrInt, shrFloat, shrBool)
+	return binaryAction(v1, v2, shrInt, nil, nil, nil)
 }
 
 func shlAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, shlInt, shlFloat, shlBool)
+	return binaryAction(v1, v2, shlInt, nil, nil, nil)
 }
 
 func leAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, leInt, leFloat, leBool)
+	return binaryAction(v1, v2, leInt, leFloat, leBool, leString)
 }
 
 func geAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, geInt, geFloat, geBool)
+	return binaryAction(v1, v2, geInt, geFloat, geBool, geString)
 }
 
 func ltAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, ltInt, ltFloat, ltBool)
+	return binaryAction(v1, v2, ltInt, ltFloat, ltBool, ltString)
 }
 
 func gtAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, gtInt, gtFloat, gtBool)
+	return binaryAction(v1, v2, gtInt, gtFloat, gtBool, gtString)
 }
 
 func eqAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, eqInt, eqFloat, eqBool)
+	return binaryAction(v1, v2, eqInt, eqFloat, eqBool, eqString)
 }
 
 func neAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, neInt, neFloat, neBool)
+	return binaryAction(v1, v2, neInt, neFloat, neBool, neString)
 }
 
 func landAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, landInt, landFloat, landBool)
+	return binaryAction(v1, v2, landInt, landFloat, landBool, landString)
 }
 
 func lorAction(v1, v2 interface{}) interface{} {
-	return binaryAction(v1, v2, lorInt, lorFloat, lorBool)
+	return binaryAction(v1, v2, lorInt, lorFloat, lorBool, lorString)
 }
 
-func binaryAction(v1, v2 interface{}, intOP func(a, b int64) interface{}, floatOP func(a, b float64) interface{}, boolOP func(a, b bool) interface{}) interface{} {
-	// TODO v1==nil
+func binaryAction(v1, v2 interface{}, intOP func(a, b int64) interface{},
+	floatOP func(a, b float64) interface{}, boolOP func(a, b bool) interface{},
+	stringOP func(a, b string) interface{}) interface{} {
+	if v1 == nil || v2 == nil {
+		return boolOP(getBool(v1), getBool(v2))
+	}
 	var result interface{}
 
-	switch v1.(type) {
+	switch v1 := v1.(type) {
 	case int64:
 		if v, ok := v2.(int64); ok {
-			result = intOP(v1.(int64), v)
+			result = intOP(v1, v)
 			break
 		}
 		if v, ok := v2.(float64); ok {
-			result = floatOP(float64(v1.(int64)), v)
+			result = floatOP(float64(v1), v)
 			break
 		}
 		if v, ok := v2.(bool); ok {
-			result = intOP(v1.(int64), boolToInt(v))
+			result = intOP(v1, boolToInt(v))
+			break
+		}
+		if v, ok := v2.(string); ok {
+			result = stringOP(strconv.Itoa(int(v1)), v)
 			break
 		}
 		panic("") // TODO
 	case float64:
 		if v, ok := v2.(int64); ok {
-			result = floatOP(v1.(float64), float64(v))
+			result = floatOP(v1, float64(v))
 			break
 		}
 		if v, ok := v2.(float64); ok {
-			result = floatOP(v1.(float64), v)
+			result = floatOP(v1, v)
 			break
 		}
 		if v, ok := v2.(bool); ok {
-			result = floatOP(v1.(float64), boolToFloat(v))
+			result = floatOP(v1, boolToFloat(v))
+			break
+		}
+		if v, ok := v2.(string); ok {
+			result = stringOP(fmt.Sprintf("%f", v1), v)
 			break
 		}
 		panic("") // TODO
 	case bool:
 		if v, ok := v2.(int64); ok {
-			result = intOP(boolToInt(v1.(bool)), v)
+			result = intOP(boolToInt(v1), v)
 			break
 		}
 		if v, ok := v2.(float64); ok {
-			result = floatOP(boolToFloat(v1.(bool)), v)
+			result = floatOP(boolToFloat(v1), v)
 			break
 		}
 		if v, ok := v2.(bool); ok {
-			result = boolOP(v1.(bool), v)
+			result = boolOP(v1, v)
+			break
+		}
+		if _, ok := v2.(string); ok {
+			result = boolOP(v1, true)
+			break
+		}
+	case string:
+		if v, ok := v2.(int64); ok {
+			result = stringOP(v1, strconv.Itoa(int(v)))
+			break
+		}
+		if v, ok := v2.(float64); ok {
+			result = stringOP(v1, fmt.Sprintf("%f", v))
+			break
+		}
+		if v, ok := v2.(bool); ok {
+			result = boolOP(true, v)
+			break
+		}
+		if v, ok := v2.(string); ok {
+			result = stringOP(v1, v)
 			break
 		}
 	default:
@@ -715,6 +749,10 @@ func addFloat(a, b float64) interface{} {
 
 func addBool(a, b bool) interface{} {
 	return boolToInt(a) + boolToInt(b)
+}
+
+func addString(a, b string) interface{} {
+	return a + b
 }
 
 func subInt(a, b int64) interface{} {
@@ -752,20 +790,12 @@ func divFloat(a, b float64) interface{} {
 	return a / b
 }
 
-func divBool(a, b bool) interface{} {
-	panic("") // TODO
-}
-
 func idivInt(a, b int64) interface{} {
 	return a / b
 }
 
 func idivFloat(a, b float64) interface{} {
 	return int64(a / b)
-}
-
-func idivBool(a, b bool) interface{} {
-	panic("") // TODO
 }
 
 func modInt(a, b int64) interface{} {
@@ -780,68 +810,24 @@ func modFloat(a, b float64) interface{} {
 	return i
 }
 
-func modBool(a, b bool) interface{} {
-	panic("") // TODO
-}
-
 func shlInt(a, b int64) interface{} {
 	return a << b
-}
-
-func shlFloat(a, b float64) interface{} {
-	panic("") // TODO
-}
-
-func shlBool(a, b bool) interface{} {
-	panic("") // TODO
 }
 
 func shrInt(a, b int64) interface{} {
 	return a >> b
 }
 
-func shrFloat(a, b float64) interface{} {
-	panic("") // TODO
-}
-
-func shrBool(a, b bool) interface{} {
-	panic("") // TODO
-}
-
 func andInt(a, b int64) interface{} {
-	return a != 0 && b != 0
-}
-
-func andFloat(a, b float64) interface{} {
-	return a != 0 && b != 0
-}
-
-func andBool(a, b bool) interface{} {
-	return a && b
+	return a & b
 }
 
 func orInt(a, b int64) interface{} {
 	return a != 0 || b != 0
 }
 
-func orFloat(a, b float64) interface{} {
-	return a != 0 || b != 0
-}
-
-func orBool(a, b bool) interface{} {
-	return a || b
-}
-
 func xorInt(a, b int64) interface{} {
 	return a ^ b
-}
-
-func xorFloat(a, b float64) interface{} {
-	panic("") // TODO
-}
-
-func xorBool(a, b bool) interface{} {
-	return boolToInt(a) ^ boolToInt(b)
 }
 
 func leInt(a, b int64) interface{} {
@@ -856,6 +842,10 @@ func leBool(a, b bool) interface{} {
 	return !(a && !b)
 }
 
+func leString(a, b string) interface{} {
+	return a <= b
+}
+
 func geInt(a, b int64) interface{} {
 	return a >= b
 }
@@ -866,6 +856,10 @@ func geFloat(a, b float64) interface{} {
 
 func geBool(a, b bool) interface{} {
 	return !(!a && b)
+}
+
+func geString(a, b string) interface{} {
+	return a >= b
 }
 
 func ltInt(a, b int64) interface{} {
@@ -880,6 +874,10 @@ func ltBool(a, b bool) interface{} {
 	return !a && b
 }
 
+func ltString(a, b string) interface{} {
+	return a < b
+}
+
 func gtInt(a, b int64) interface{} {
 	return a > b
 }
@@ -892,6 +890,10 @@ func gtBool(a, b bool) interface{} {
 	return a && !b
 }
 
+func gtString(a, b string) interface{} {
+	return a > b
+}
+
 func eqInt(a, b int64) interface{} {
 	return a == b
 }
@@ -901,6 +903,10 @@ func eqFloat(a, b float64) interface{} {
 }
 
 func eqBool(a, b bool) interface{} {
+	return a == b
+}
+
+func eqString(a, b string) interface{} {
 	return a == b
 }
 
@@ -916,6 +922,10 @@ func neBool(a, b bool) interface{} {
 	return a != b
 }
 
+func neString(a, b string) interface{} {
+	return a != b
+}
+
 func landInt(a, b int64) interface{} {
 	return a != 0 && b != 0
 }
@@ -928,6 +938,10 @@ func landBool(a, b bool) interface{} {
 	return a && b
 }
 
+func landString(a, b string) interface{} {
+	return true
+}
+
 func lorInt(a, b int64) interface{} {
 	return a != 0 || b != 0
 }
@@ -938,4 +952,8 @@ func lorFloat(a, b float64) interface{} {
 
 func lorBool(a, b bool) interface{} {
 	return a || b
+}
+
+func lorString(a, b string) interface{} {
+	return true
 }
