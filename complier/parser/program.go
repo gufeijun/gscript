@@ -54,7 +54,7 @@ func (p *Parser) parseImport() (ipt ast.Import) {
 		if !p.l.Expect(TOKEN_IDENTIFIER) {
 			panic(p.l.Line())
 		}
-		ipt.Libs[i].Alia = p.l.NextToken().Content
+		ipt.Libs[i].Alias = p.l.NextToken().Content
 		if !p.l.Expect(TOKEN_SEP_COMMA) {
 			return
 		}

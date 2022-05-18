@@ -16,7 +16,7 @@ type Import struct {
 type Lib struct {
 	Stdlib bool
 	Path   string
-	Alia   string
+	Alias  string
 }
 
 // Block or Stmt
