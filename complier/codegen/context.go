@@ -163,6 +163,11 @@ func (ctx *Context) insLoadUpValue(idx uint32) {
 	ctx.writeUint(idx)
 }
 
+func (ctx *Context) insLoadProto(idx uint32) {
+	ctx.writeIns(proto.INS_LOAD_PROTO)
+	ctx.writeUint(idx)
+}
+
 func (ctx *Context) insStoreUpValue(idx uint32) {
 	ctx.writeIns(proto.INS_STORE_UPVALUE)
 	ctx.writeUint(idx)
