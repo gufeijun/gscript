@@ -36,6 +36,7 @@ var actions = []func(vm *VM){
 	actionLoadFunc,
 	actionLoadAnonymous,
 	actionLoadUpValue,
+	actionLoadProto,
 	actionStoreName,
 	actionStoreUpValue,
 	actionStoreKV,
@@ -66,121 +67,122 @@ var actions = []func(vm *VM){
 	actionCall,
 	actionReturn,
 	actionRotTwo,
+	actionExport,
 }
 
 func actionUnaryNOT(vm *VM) {
-	top := vm.stack.Top()
+	top := vm.curProto.stack.Top()
 	if v, ok := top.(int64); ok {
-		vm.stack.Replace(^int64(v))
+		vm.curProto.stack.Replace(^int64(v))
 		return
 	}
 	panic("") // TODO
 }
 
 func actionUnaryNEG(vm *VM) {
-	top := vm.stack.Top()
+	top := vm.curProto.stack.Top()
 	if v, ok := top.(int64); ok {
-		vm.stack.Replace(-int64(v))
+		vm.curProto.stack.Replace(-int64(v))
 		return
 	}
 	if v, ok := top.(float64); ok {
-		vm.stack.Replace(-float64(v))
+		vm.curProto.stack.Replace(-float64(v))
 		return
 	}
 	panic("") // TODO
 }
 
 func actionUnaryLNOT(vm *VM) {
-	vm.stack.Replace(!getBool(vm.stack.Top()))
+	vm.curProto.stack.Replace(!getBool(vm.curProto.stack.Top()))
 }
 
 func getTop2(vm *VM) (v1, v2 interface{}) {
-	v2 = vm.stack.Top()
-	vm.stack.Pop()
-	v1 = vm.stack.Top()
+	v2 = vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
+	v1 = vm.curProto.stack.Top()
 	return
 }
 
 func actionBinaryADD(vm *VM) {
-	vm.stack.Replace(addAction(getTop2(vm)))
+	vm.curProto.stack.Replace(addAction(getTop2(vm)))
 }
 
 func actionBinarySUB(vm *VM) {
-	vm.stack.Replace(subAction(getTop2(vm)))
+	vm.curProto.stack.Replace(subAction(getTop2(vm)))
 }
 
 func actionBinaryMUL(vm *VM) {
-	vm.stack.Replace(mulAction(getTop2(vm)))
+	vm.curProto.stack.Replace(mulAction(getTop2(vm)))
 }
 
 func actionBinaryDIV(vm *VM) {
-	vm.stack.Replace(divAction(getTop2(vm)))
+	vm.curProto.stack.Replace(divAction(getTop2(vm)))
 }
 
 func actionBinaryIDIV(vm *VM) {
-	vm.stack.Replace(idivAction(getTop2(vm)))
+	vm.curProto.stack.Replace(idivAction(getTop2(vm)))
 }
 
 func actionBinaryMOD(vm *VM) {
-	vm.stack.Replace(modAction(getTop2(vm)))
+	vm.curProto.stack.Replace(modAction(getTop2(vm)))
 }
 
 func actionBinarySHL(vm *VM) {
-	vm.stack.Replace(shlAction(getTop2(vm)))
+	vm.curProto.stack.Replace(shlAction(getTop2(vm)))
 }
 
 func actionBinarySHR(vm *VM) {
-	vm.stack.Replace(shrAction(getTop2(vm)))
+	vm.curProto.stack.Replace(shrAction(getTop2(vm)))
 }
 
 func actionBinaryAND(vm *VM) {
-	vm.stack.Replace(andAction(getTop2(vm)))
+	vm.curProto.stack.Replace(andAction(getTop2(vm)))
 }
 
 func actionBinaryOR(vm *VM) {
-	vm.stack.Replace(orAction(getTop2(vm)))
+	vm.curProto.stack.Replace(orAction(getTop2(vm)))
 }
 
 func actionBinaryXOR(vm *VM) {
-	vm.stack.Replace(xorAction(getTop2(vm)))
+	vm.curProto.stack.Replace(xorAction(getTop2(vm)))
 }
 
 func actionBinaryLE(vm *VM) {
-	vm.stack.Replace(leAction(getTop2(vm)))
+	vm.curProto.stack.Replace(leAction(getTop2(vm)))
 }
 
 func actionBinaryGE(vm *VM) {
-	vm.stack.Replace(geAction(getTop2(vm)))
+	vm.curProto.stack.Replace(geAction(getTop2(vm)))
 }
 
 func actionBinaryLT(vm *VM) {
-	vm.stack.Replace(ltAction(getTop2(vm)))
+	vm.curProto.stack.Replace(ltAction(getTop2(vm)))
 }
 
 func actionBinaryGT(vm *VM) {
-	vm.stack.Replace(gtAction(getTop2(vm)))
+	vm.curProto.stack.Replace(gtAction(getTop2(vm)))
 }
 
 func actionBinaryEQ(vm *VM) {
-	vm.stack.Replace(eqAction(getTop2(vm)))
+	vm.curProto.stack.Replace(eqAction(getTop2(vm)))
 }
 
 func actionBinaryNE(vm *VM) {
-	vm.stack.Replace(neAction(getTop2(vm)))
+	vm.curProto.stack.Replace(neAction(getTop2(vm)))
 }
 
 func actionBinaryLAND(vm *VM) {
-	vm.stack.Replace(landAction(getTop2(vm)))
+	vm.curProto.stack.Replace(landAction(getTop2(vm)))
 }
 
 func actionBinaryLOR(vm *VM) {
-	vm.stack.Replace(lorAction(getTop2(vm)))
+	vm.curProto.stack.Replace(lorAction(getTop2(vm)))
 }
 
 func actionBinaryATTR(vm *VM) {
-	key := vm.stack.Top()
-	vm.stack.Pop()
-	obj := vm.stack.Top()
+	key := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
+	obj := vm.curProto.stack.Top()
 	if slice, ok := obj.([]interface{}); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
@@ -189,14 +191,14 @@ func actionBinaryATTR(vm *VM) {
 		if idx > int64(len(slice)) {
 			panic("index out of range") // TODO
 		}
-		vm.stack.Replace(slice[idx])
+		vm.curProto.stack.Replace(slice[idx])
 		return
 	}
 	if _map, ok := obj.(map[interface{}]interface{}); ok {
 		if key == nil {
 			panic("map key should not be nil")
 		}
-		vm.stack.Replace(_map[key])
+		vm.curProto.stack.Replace(_map[key])
 		return
 	}
 	// TODO
@@ -204,35 +206,35 @@ func actionBinaryATTR(vm *VM) {
 }
 
 func actionLoadNil(vm *VM) {
-	vm.stack.Push(nil)
+	vm.curProto.stack.Push(nil)
 }
 
 func actionLoadConst(vm *VM) {
-	vm.stack.Push(vm.constTable[vm.getOpNum()])
+	vm.curProto.stack.Push(vm.curProto.constTable[vm.getOpNum()])
 }
 
 func actionLoadName(vm *VM) {
-	vm.stack.Push(vm.frame.symbolTable.getValue(vm.getOpNum()))
+	vm.curProto.stack.Push(vm.curProto.frame.symbolTable.getValue(vm.getOpNum()))
 }
 
 func actionLoadFunc(vm *VM) {
-	f := &vm.funcTable[vm.getOpNum()]
+	f := &vm.curProto.funcTable[vm.getOpNum()]
 	if f.UpValueTable == nil {
 		table := make([]*GsValue, 0, len(f.UpValues))
 		for _, nameIdx := range f.UpValues {
-			v := vm.topFrame.symbolTable.values[nameIdx]
+			v := vm.curProto.topFrame.symbolTable.values[nameIdx]
 			table = append(table, v)
 		}
 		f.UpValueTable = table
 	}
-	vm.stack.Push(&Closure{
+	vm.curProto.stack.Push(&Closure{
 		Info:     f.Info,
 		UpValues: f.UpValueTable.([]*GsValue),
 	})
 }
 
 func actionLoadAnonymous(vm *VM) {
-	f := &vm.anonymousTable[vm.getOpNum()]
+	f := &vm.curProto.anonymousTable[vm.getOpNum()]
 	closure := &Closure{
 		Info:     f.Info,
 		UpValues: make([]*GsValue, 0, len(f.UpValues)),
@@ -240,64 +242,72 @@ func actionLoadAnonymous(vm *VM) {
 	for _, upValue := range f.UpValues {
 		var v *GsValue
 		if !upValue.DirectDependent {
-			v = vm.frame.upValues[upValue.Index]
+			v = vm.curProto.frame.upValues[upValue.Index]
 		} else {
-			v = vm.frame.symbolTable.values[upValue.Index]
+			v = vm.curProto.frame.symbolTable.values[upValue.Index]
 		}
 		closure.UpValues = append(closure.UpValues, v)
 	}
-	vm.stack.Push(closure)
+	vm.curProto.stack.Push(closure)
 }
 
 func actionLoadUpValue(vm *VM) {
-	vm.stack.Push(vm.frame.upValues[vm.getOpNum()].value)
+	vm.curProto.stack.Push(vm.curProto.frame.upValues[vm.getOpNum()].value)
+}
+
+func actionLoadProto(vm *VM) {
+	num := vm.getOpNum()
+	frame := newProtoFrame(vm.protos[num])
+	frame.prev = vm.curProto
+	vm.curProto = frame
 }
 
 func actionStoreName(vm *VM) {
-	vm.frame.symbolTable.setValue(vm.getOpNum(), vm.stack.Top())
-	vm.stack.Pop()
+	vm.curProto.frame.symbolTable.setValue(vm.getOpNum(), vm.curProto.stack.Top())
+	vm.curProto.stack.Pop()
 }
 
 func actionStoreUpValue(vm *VM) {
-	vm.frame.upValues[vm.getOpNum()].value = vm.stack.Top()
-	vm.stack.Pop()
+	vm.curProto.frame.upValues[vm.getOpNum()].value = vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
 }
 
 func actionStoreKV(vm *VM) {
-	obj, ok := vm.frame.symbolTable.top().(map[interface{}]interface{})
+	obj, ok := vm.curProto.frame.symbolTable.top().(map[interface{}]interface{})
 	if !ok {
 		panic("STORE_KV: target is not an object") // TODO
 	}
-	val := vm.stack.Top()
-	vm.stack.Pop()
-	key := vm.stack.Top()
-	vm.stack.Pop()
+	val := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
+	key := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
 	obj[key] = val
 }
 
 func actionPushNameNil(vm *VM) {
-	vm.frame.symbolTable.pushSymbol(nil)
+	vm.curProto.frame.symbolTable.pushSymbol(nil)
 }
 
 func actionPushName(vm *VM) {
-	vm.frame.symbolTable.pushSymbol(vm.stack.Top())
-	vm.stack.Pop()
+	vm.curProto.frame.symbolTable.pushSymbol(vm.curProto.stack.Top())
+	vm.curProto.stack.Pop()
 }
 
 func actionCopyName(vm *VM) {
-	vm.frame.symbolTable.pushSymbol(vm.stack.Top())
+	vm.curProto.frame.symbolTable.pushSymbol(vm.curProto.stack.Top())
 }
 
 func actionResizeNameTable(vm *VM) {
 	length := int(vm.getOpNum())
-	if length >= len(vm.frame.symbolTable.values) {
+	st := vm.curProto.frame.symbolTable
+	if length >= len(st.values) {
 		return
 	}
-	vm.frame.symbolTable.values = vm.frame.symbolTable.values[:length]
+	st.values = st.values[:length]
 }
 
 func actionPopTop(vm *VM) {
-	vm.stack.Pop()
+	vm.curProto.stack.Pop()
 }
 
 func actionStop(vm *VM) {
@@ -308,20 +318,20 @@ func actionSliceNew(vm *VM) {
 	cnt := vm.getOpNum()
 	arr := make([]interface{}, cnt)
 	for i := int(cnt) - 1; i >= 0; i-- {
-		val := vm.stack.Top()
-		vm.stack.Pop()
+		val := vm.curProto.stack.Top()
+		vm.curProto.stack.Pop()
 		arr[i] = val
 	}
-	vm.stack.Push(arr)
+	vm.curProto.stack.Push(arr)
 }
 
 func actionSliceAppend(vm *VM) {
-	val := vm.stack.Top()
-	vm.stack.Pop()
-	top := vm.stack.Top()
+	val := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
+	top := vm.curProto.stack.Top()
 	if slice, ok := top.([]interface{}); ok {
 		slice = append(slice, val)
-		vm.stack.Replace(slice)
+		vm.curProto.stack.Replace(slice)
 		return
 	}
 	panic("append operate for illegal type") // TODO
@@ -331,20 +341,20 @@ func actionNewMap(vm *VM) {
 	m := make(map[interface{}]interface{})
 	cnt := vm.getOpNum()
 	for i := 0; i < int(cnt); i++ {
-		val := vm.stack.Top()
-		vm.stack.Pop()
-		key := vm.stack.Top()
-		vm.stack.Pop()
+		val := vm.curProto.stack.Top()
+		vm.curProto.stack.Pop()
+		key := vm.curProto.stack.Top()
+		vm.curProto.stack.Pop()
 		if key == nil {
 			panic("map key should not be nil") // TODO
 		}
 		m[key] = val
 	}
-	vm.stack.Push(m)
+	vm.curProto.stack.Push(m)
 }
 
 func actionNewEmptyMap(vm *VM) {
-	vm.stack.Push(map[interface{}]interface{}{})
+	vm.curProto.stack.Push(map[interface{}]interface{}{})
 }
 
 func actionAttrAssign(vm *VM) {
@@ -386,12 +396,12 @@ func actionAttrAssignOrEq(vm *VM) {
 }
 
 func attrAssign(vm *VM, cb func(ori, val interface{}) interface{}) {
-	obj := vm.stack.Top()
-	vm.stack.Pop()
-	key := vm.stack.Top()
-	vm.stack.Pop()
-	val := vm.stack.Top()
-	vm.stack.Pop()
+	obj := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
+	key := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
+	val := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
 	if slice, ok := obj.([]interface{}); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
@@ -415,9 +425,9 @@ func attrAssign(vm *VM, cb func(ori, val interface{}) interface{}) {
 }
 
 func actionAttrAccess(vm *VM) {
-	obj := vm.stack.Top()
-	vm.stack.Pop()
-	key := vm.stack.Top()
+	obj := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
+	key := vm.curProto.stack.Top()
 	if slice, ok := obj.([]interface{}); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
@@ -426,14 +436,14 @@ func actionAttrAccess(vm *VM) {
 		if idx > int64(len(slice)) {
 			panic("index out of range")
 		}
-		vm.stack.Replace(slice[idx])
+		vm.curProto.stack.Replace(slice[idx])
 		return
 	}
 	if _map, ok := obj.(map[interface{}]interface{}); ok {
 		if key == nil {
 			panic("map key should not be nil")
 		}
-		vm.stack.Replace(_map[key])
+		vm.curProto.stack.Replace(_map[key])
 		return
 	}
 	// TODO
@@ -442,57 +452,57 @@ func actionAttrAccess(vm *VM) {
 
 func actionJumpRel(vm *VM) {
 	steps := vm.getOpNum()
-	vm.frame.pc += steps
+	vm.curProto.frame.pc += steps
 }
 
 func actionJumpAbs(vm *VM) {
-	vm.frame.pc = vm.getOpNum()
+	vm.curProto.frame.pc = vm.getOpNum()
 }
 
 func actionJumpIf(vm *VM) {
-	top := vm.stack.Top()
-	vm.stack.Pop()
+	top := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
 	steps := vm.getOpNum()
 	if getBool(top) {
-		vm.frame.pc += steps
+		vm.curProto.frame.pc += steps
 	}
 }
 
 func actionJumpCase(vm *VM) {
-	caseCond := vm.stack.Top()
-	vm.stack.Pop()
-	switchCond := vm.stack.Top()
+	caseCond := vm.curProto.stack.Top()
+	vm.curProto.stack.Pop()
+	switchCond := vm.curProto.stack.Top()
 	steps := vm.getOpNum()
 	if eqAction(caseCond, switchCond).(bool) {
-		vm.frame.pc += steps
+		vm.curProto.frame.pc += steps
 	}
 }
 
 func actionCall(vm *VM) {
-	_func := vm.stack.Top().(*Closure)
-	vm.stack.Pop()
+	_func := vm.curProto.stack.Top().(*Closure)
+	vm.curProto.stack.Pop()
 
-	wantRtnCnt := int(vm.frame.text[vm.frame.pc])
-	vm.frame.pc++
-	argCnt := uint32(vm.frame.text[vm.frame.pc])
-	vm.frame.pc++
+	wantRtnCnt := int(vm.curProto.frame.text[vm.curProto.frame.pc])
+	vm.curProto.frame.pc++
+	argCnt := uint32(vm.curProto.frame.text[vm.curProto.frame.pc])
+	vm.curProto.frame.pc++
 
 	// generate a new function call frame
 	frame := &stackFrame{
 		pc:          0,
-		prev:        vm.frame,
+		prev:        vm.curProto.frame,
 		symbolTable: newSymbolTable(),
 		wantRetCnt:  wantRtnCnt,
 		text:        _func.Info.Text,
 		upValues:    _func.UpValues,
 	}
-	vm.frame = frame
+	vm.curProto.frame = frame
 
 	parCnt := uint32(len(_func.Info.Parameters))
 
 	// if arguments is fewer than parameters, push several nil values to make up
 	for argCnt < parCnt {
-		vm.stack.Push(_func.Info.Parameters[argCnt].Default)
+		vm.curProto.stack.Push(_func.Info.Parameters[argCnt].Default)
 		argCnt++
 	}
 	if _func.Info.VaArgs {
@@ -501,15 +511,15 @@ func actionCall(vm *VM) {
 		arr := make([]interface{}, i)
 		for i > 0 {
 			i--
-			arr[i] = vm.stack.Top()
-			vm.stack.Pop()
+			arr[i] = vm.curProto.stack.Top()
+			vm.curProto.stack.Pop()
 			argCnt--
 		}
-		vm.stack.Push(arr)
+		vm.curProto.stack.Push(arr)
 	} else {
 		// pop out extra arguments
 		for argCnt > parCnt {
-			vm.stack.Pop()
+			vm.curProto.stack.Pop()
 			argCnt--
 		}
 	}
@@ -517,27 +527,37 @@ func actionCall(vm *VM) {
 
 func actionReturn(vm *VM) {
 	realRtnCnt := int(vm.getOpNum())
-	wantRtnCnt := vm.frame.wantRetCnt
+	wantRtnCnt := vm.curProto.frame.wantRetCnt
 
 	for wantRtnCnt < realRtnCnt {
-		vm.stack.Pop()
+		vm.curProto.stack.Pop()
 		wantRtnCnt++
 	}
 	for wantRtnCnt > realRtnCnt {
-		vm.stack.Push(nil)
+		vm.curProto.stack.Push(nil)
 		wantRtnCnt--
 	}
 
-	if vm.frame.prev == nil {
+	if vm.curProto.frame.prev == nil {
 		vm.Stop()
 	}
-	vm.frame.symbolTable = nil
-	vm.frame = vm.frame.prev
+	vm.curProto.frame.symbolTable = nil
+	vm.curProto.frame = vm.curProto.frame.prev
 }
 
 func actionRotTwo(vm *VM) {
-	top := len(vm.stack.Buf) - 1
-	vm.stack.Buf[top], vm.stack.Buf[top-1] = vm.stack.Buf[top-1], vm.stack.Buf[top]
+	top := len(vm.curProto.stack.Buf) - 1
+	s := vm.curProto.stack
+	s.Buf[top], s.Buf[top-1] = s.Buf[top-1], s.Buf[top]
+}
+
+func actionExport(vm *VM) {
+	var val interface{}
+	if len(vm.curProto.stack.Buf) != 0 {
+		val = vm.curProto.stack.Top()
+	}
+	vm.curProto = vm.curProto.prev
+	vm.curProto.stack.Push(val)
 }
 
 func Execute(vm *VM, ins proto.Instruction) {
