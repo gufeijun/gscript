@@ -8,22 +8,47 @@ import (
 	"unsafe"
 )
 
-func Gen(parser *parser.Parser) (_proto proto.Proto) {
-	prog := parser.Parse()
+type Import struct {
+	ProtoNumber uint32
+	Alias       string
+}
+
+func Gen(parser *parser.Parser, prog *ast.Program, imports []Import, mainProto bool) proto.Proto {
 	ctx := newContext(parser)
 
+	genImports(imports, ctx)
 	// make all enum and class statements global
 	genEnumStmt(parser.EnumStmts, ctx)
 	genClassStmts(parser.ClassStmts, ctx)
 
 	genBlockStmts(prog.BlockStmts, ctx)
-	ctx.writeIns(proto.INS_STOP)
+	if !mainProto {
+		genExport(prog.Export, ctx)
+	} else {
+		ctx.writeIns(proto.INS_STOP)
+	}
 
 	return proto.Proto{
 		Text:           bytesToInstructions(ctx.frame.text),
 		Consts:         ctx.ct.Constants,
 		Funcs:          ctx.ft.funcTable,
 		AnonymousFuncs: ctx.ft.anonymousFuncs,
+	}
+}
+
+func genExport(export ast.Export, ctx *Context) {
+	exp := export.Exp
+	if export.Exp == nil {
+		exp = &ast.NilExp{}
+	}
+	genExp(exp, ctx, 1)
+	ctx.writeIns(proto.INS_EXPORT)
+}
+
+func genImports(imports []Import, ctx *Context) {
+	for _, _import := range imports {
+		ctx.insLoadProto(_import.ProtoNumber)
+		ctx.insPushName(_import.Alias)
 	}
 }
 
