@@ -5,4 +5,5 @@ type Proto struct {
 	Consts         []interface{}
 	Funcs          []FuncProto
 	AnonymousFuncs []AnonymousFuncProto
+	FilePath       string
 }
