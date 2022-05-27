@@ -48,7 +48,6 @@ var actions = []func(vm *VM){
 	actionPopTop,
 	actionStop,
 	actionSliceNew,
-	actionSliceAppend,
 	actionNewMap,
 	actionNewEmptyMap,
 	actionAttrAssign,
@@ -184,15 +183,26 @@ func actionBinaryATTR(vm *VM) {
 	key := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
 	obj := vm.curProto.stack.Top()
-	if slice, ok := obj.([]interface{}); ok {
+	if slice, ok := obj.(*[]interface{}); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
 			panic("array index should be integer") // TODO
 		}
-		if idx > int64(len(slice)) {
+		if idx > int64(len(*slice)) {
 			panic("index out of range") // TODO
 		}
-		vm.curProto.stack.Replace(slice[idx])
+		vm.curProto.stack.Replace((*slice)[idx])
+		return
+	}
+	if str, ok := obj.(string); ok {
+		var idx int64
+		if idx, ok = key.(int64); !ok {
+			panic("array index should be integer") // TODO
+		}
+		if idx > int64(len(str)) {
+			panic("index out of range") // TODO
+		}
+		vm.curProto.stack.Replace(int64(str[idx]))
 		return
 	}
 	if _map, ok := obj.(map[interface{}]interface{}); ok {
@@ -329,19 +339,7 @@ func actionSliceNew(vm *VM) {
 		vm.curProto.stack.Pop()
 		arr[i] = val
 	}
-	vm.curProto.stack.Push(arr)
-}
-
-func actionSliceAppend(vm *VM) {
-	val := vm.curProto.stack.Top()
-	vm.curProto.stack.Pop()
-	top := vm.curProto.stack.Top()
-	if slice, ok := top.([]interface{}); ok {
-		slice = append(slice, val)
-		vm.curProto.stack.Replace(slice)
-		return
-	}
-	panic("append operate for illegal type") // TODO
+	vm.curProto.stack.Push(&arr)
 }
 
 func actionNewMap(vm *VM) {
@@ -409,15 +407,15 @@ func attrAssign(vm *VM, cb func(ori, val interface{}) interface{}) {
 	vm.curProto.stack.Pop()
 	val := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
-	if slice, ok := obj.([]interface{}); ok {
+	if slice, ok := obj.(*[]interface{}); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
 			panic("array index should be integer") // TODO
 		}
-		if idx > int64(len(slice)) {
+		if idx > int64(len(*slice)) {
 			panic("index out of range")
 		}
-		slice[idx] = cb(slice[idx], val)
+		(*slice)[idx] = cb((*slice)[idx], val)
 		return
 	}
 	if _map, ok := obj.(map[interface{}]interface{}); ok {
@@ -435,15 +433,26 @@ func actionAttrAccess(vm *VM) {
 	obj := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
 	key := vm.curProto.stack.Top()
-	if slice, ok := obj.([]interface{}); ok {
+	if slice, ok := obj.(*[]interface{}); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
 			panic("array index should be integer") // TODO
 		}
-		if idx > int64(len(slice)) {
+		if idx > int64(len(*slice)) {
 			panic("index out of range")
 		}
-		vm.curProto.stack.Replace(slice[idx])
+		vm.curProto.stack.Replace((*slice)[idx])
+		return
+	}
+	if str, ok := obj.(string); ok {
+		var idx int64
+		if idx, ok = key.(int64); !ok {
+			panic("array index should be integer") // TODO
+		}
+		if idx > int64(len(str)) {
+			panic("index out of range")
+		}
+		vm.curProto.stack.Replace(int64(str[idx]))
 		return
 	}
 	if _map, ok := obj.(map[interface{}]interface{}); ok {
@@ -537,15 +546,7 @@ func callBuiltin(_func *builtinFunc, vm *VM, argCnt uint32, wantRtnCnt int) {
 	}
 }
 
-func actionCall(vm *VM) {
-	text := vm.curProto.frame.text
-	wantRtnCnt := int(text[vm.curProto.frame.pc])
-	vm.curProto.frame.pc++
-	argCnt := uint32(text[vm.curProto.frame.pc])
-	vm.curProto.frame.pc++
-
-	_func := vm.curProto.stack.pop()
-
+func call(_func interface{}, vm *VM, argCnt uint32, wantRtnCnt int) {
 	switch _func := _func.(type) {
 	case *Closure:
 		callFunc(_func, vm, argCnt, wantRtnCnt)
@@ -554,7 +555,17 @@ func actionCall(vm *VM) {
 	default:
 		panic("") // TODO
 	}
+}
 
+func actionCall(vm *VM) {
+	text := vm.curProto.frame.text
+	wantRtnCnt := int(text[vm.curProto.frame.pc])
+	vm.curProto.frame.pc++
+	argCnt := uint32(text[vm.curProto.frame.pc])
+	vm.curProto.frame.pc++
+
+	_func := vm.curProto.stack.pop()
+	call(_func, vm, argCnt, wantRtnCnt)
 }
 
 func actionReturn(vm *VM) {
