@@ -207,6 +207,8 @@ func showValue(val interface{}) {
 			}
 		}
 		fmt.Printf("]}")
+	case *builtinFunc:
+		fmt.Printf("builtin(\"%s\")", val.name)
 	default:
 		fmt.Printf("%v", val)
 	}
@@ -289,6 +291,9 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 		skip += 4
 	case proto.INS_STORE_UPVALUE:
 		fmt.Printf("STORE_UPVALUE %d", getOpNum(text, pc))
+		skip += 4
+	case proto.INS_LOAD_BUILTIN:
+		fmt.Printf("LOAD_BUILTIN \"%s\"", builtinFuncs[getOpNum(text, pc)].name)
 		skip += 4
 	case proto.INS_STORE_KV:
 		fmt.Printf("STORE_KV")

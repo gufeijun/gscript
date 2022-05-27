@@ -34,6 +34,7 @@ var actions = []func(vm *VM){
 	actionLoadConst,
 	actionLoadName,
 	actionLoadFunc,
+	actionLoadBuiltin,
 	actionLoadAnonymous,
 	actionLoadUpValue,
 	actionLoadProto,
@@ -231,6 +232,12 @@ func actionLoadFunc(vm *VM) {
 		Info:     f.Info,
 		UpValues: f.UpValueTable.([]*GsValue),
 	})
+}
+
+func actionLoadBuiltin(vm *VM) {
+	builtinNum := vm.getOpNum()
+	builtinFunc := &builtinFuncs[builtinNum]
+	vm.curProto.stack.Push(builtinFunc)
 }
 
 func actionLoadAnonymous(vm *VM) {
@@ -478,34 +485,26 @@ func actionJumpCase(vm *VM) {
 	}
 }
 
-func actionCall(vm *VM) {
-	_func := vm.curProto.stack.Top().(*Closure)
-	vm.curProto.stack.Pop()
-
-	wantRtnCnt := int(vm.curProto.frame.text[vm.curProto.frame.pc])
-	vm.curProto.frame.pc++
-	argCnt := uint32(vm.curProto.frame.text[vm.curProto.frame.pc])
-	vm.curProto.frame.pc++
-
+func callFunc(closure *Closure, vm *VM, argCnt uint32, wantRtnCnt int) {
 	// generate a new function call frame
 	frame := &stackFrame{
 		pc:          0,
 		prev:        vm.curProto.frame,
 		symbolTable: newSymbolTable(),
 		wantRetCnt:  wantRtnCnt,
-		text:        _func.Info.Text,
-		upValues:    _func.UpValues,
+		text:        closure.Info.Text,
+		upValues:    closure.UpValues,
 	}
 	vm.curProto.frame = frame
 
-	parCnt := uint32(len(_func.Info.Parameters))
+	parCnt := uint32(len(closure.Info.Parameters))
 
 	// if arguments is fewer than parameters, push several nil values to make up
 	for argCnt < parCnt {
-		vm.curProto.stack.Push(_func.Info.Parameters[argCnt].Default)
+		vm.curProto.stack.Push(closure.Info.Parameters[argCnt].Default)
 		argCnt++
 	}
-	if _func.Info.VaArgs {
+	if closure.Info.VaArgs {
 		// collect VaArgs
 		i := argCnt - parCnt
 		arr := make([]interface{}, i)
@@ -523,6 +522,39 @@ func actionCall(vm *VM) {
 			argCnt--
 		}
 	}
+
+}
+
+func callBuiltin(_func *builtinFunc, vm *VM, argCnt uint32, wantRtnCnt int) {
+	realRtnCnt := _func.handler(int(argCnt), vm)
+	for wantRtnCnt < realRtnCnt {
+		vm.curProto.stack.Pop()
+		wantRtnCnt++
+	}
+	for wantRtnCnt > realRtnCnt {
+		vm.curProto.stack.Push(nil)
+		wantRtnCnt--
+	}
+}
+
+func actionCall(vm *VM) {
+	text := vm.curProto.frame.text
+	wantRtnCnt := int(text[vm.curProto.frame.pc])
+	vm.curProto.frame.pc++
+	argCnt := uint32(text[vm.curProto.frame.pc])
+	vm.curProto.frame.pc++
+
+	_func := vm.curProto.stack.pop()
+
+	switch _func := _func.(type) {
+	case *Closure:
+		callFunc(_func, vm, argCnt, wantRtnCnt)
+	case *builtinFunc:
+		callBuiltin(_func, vm, argCnt, wantRtnCnt)
+	default:
+		panic("") // TODO
+	}
+
 }
 
 func actionReturn(vm *VM) {
