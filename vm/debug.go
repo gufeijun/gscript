@@ -209,6 +209,8 @@ func showValue(val interface{}) {
 		fmt.Printf("]}")
 	case *builtinFunc:
 		fmt.Printf("builtin(\"%s\")", val.name)
+	case *[]interface{}:
+		fmt.Printf("%v", *val)
 	default:
 		fmt.Printf("%v", val)
 	}
@@ -323,8 +325,6 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 	case proto.INS_SLICE_NEW:
 		fmt.Printf("SLICE_NEW %d", getOpNum(text, pc))
 		skip += 4
-	case proto.INS_SLICE_APPEND:
-		fmt.Printf("SLICE_APPEND")
 	case proto.INS_NEW_EMPTY_MAP:
 		fmt.Printf("NEW_EMPTY_MAP")
 	case proto.INS_NEW_MAP:
