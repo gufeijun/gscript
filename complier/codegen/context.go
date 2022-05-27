@@ -200,6 +200,7 @@ func tryLoadUpValue(ctx *Context, name string) (upValueIdx uint32, ok bool) {
 }
 
 func (ctx *Context) insLoadName(name string) {
+	// name is a defined variable?
 	idx, ok := searchFrame(ctx.frame, name)
 	if ok {
 		ctx.writeIns(proto.INS_LOAD_NAME)
@@ -207,23 +208,31 @@ func (ctx *Context) insLoadName(name string) {
 		return
 	}
 
-	// // if name is an upValue?
+	// name is an upValue?
 	if idx, ok := tryLoadUpValue(ctx, name); ok {
 		ctx.insLoadUpValue(idx)
 		return
 	}
 
-	// if name is a function?
+	// name is a function?
 	idx, ok = ctx.ft.funcMap[name]
 	if ok {
 		ctx.insLoadFunc(idx)
 		return
 	}
 
-	// if name is a enum constant?
+	// name is a enum constant?
 	idx, ok = ctx.ct.getEnum(name)
 	if ok {
 		ctx.writeIns(proto.INS_LOAD_CONST)
+		ctx.writeUint(idx)
+		return
+	}
+
+	// name is a builtin function?
+	idx, ok = builtinFuncs[name]
+	if ok {
+		ctx.writeIns(proto.INS_LOAD_BUILTIN)
 		ctx.writeUint(idx)
 		return
 	}
@@ -280,4 +289,8 @@ type label struct {
 	name          string
 	addr          uint32
 	nameTableSize uint32
+}
+
+var builtinFuncs = map[string]uint32{
+	"print": 0,
 }
