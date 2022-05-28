@@ -221,7 +221,7 @@ func actionLoadNil(vm *VM) {
 }
 
 func actionLoadConst(vm *VM) {
-	vm.curProto.stack.Push(vm.curProto.constTable[vm.getOpNum()])
+	vm.curProto.stack.Push(vm.protos[vm.getOpNum()].Consts[vm.getOpNum()])
 }
 
 func actionLoadName(vm *VM) {
@@ -229,7 +229,7 @@ func actionLoadName(vm *VM) {
 }
 
 func actionLoadFunc(vm *VM) {
-	f := &vm.curProto.funcTable[vm.getOpNum()]
+	f := &vm.protos[vm.getOpNum()].Funcs[vm.getOpNum()]
 	if f.UpValueTable == nil {
 		table := make([]*GsValue, 0, len(f.UpValues))
 		for _, nameIdx := range f.UpValues {
@@ -251,7 +251,7 @@ func actionLoadBuiltin(vm *VM) {
 }
 
 func actionLoadAnonymous(vm *VM) {
-	f := &vm.curProto.anonymousTable[vm.getOpNum()]
+	f := &vm.protos[vm.getOpNum()].AnonymousFuncs[vm.getOpNum()]
 	closure := &Closure{
 		Info:     f.Info,
 		UpValues: make([]*GsValue, 0, len(f.UpValues)),
@@ -523,7 +523,7 @@ func callFunc(closure *Closure, vm *VM, argCnt uint32, wantRtnCnt int) {
 			vm.curProto.stack.Pop()
 			argCnt--
 		}
-		vm.curProto.stack.Push(arr)
+		vm.curProto.stack.Push(&arr)
 	} else {
 		// pop out extra arguments
 		for argCnt > parCnt {
