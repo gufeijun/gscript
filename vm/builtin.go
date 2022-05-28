@@ -20,7 +20,6 @@ var builtinFuncs = []builtinFunc{
 	{builtinType, "type"},
 	{builtinDelete, "delete"},
 	{builtinClone, "clone"},
-	{builtinForeach, "foreach"},
 	{builtinBufferNew, "__buffer_new"},
 	{builtinBufferReadNumber, "__buffer_readNumber"},
 	{builtinBufferWriteNumber, "__buffer_writeNumber"},
@@ -270,39 +269,6 @@ func pushTwo(vm *VM, k, v interface{}) {
 	vm.curProto.stack.Push(v)
 }
 
-func builtinForeach(argCnt int, vm *VM) (retCnt int) {
-	if argCnt != 2 {
-		panic("") // TODO
-	}
-	_func := vm.curProto.stack.pop()
-	src := vm.curProto.stack.pop()
-	switch src := src.(type) {
-	case *[]interface{}:
-		for idx, val := range *src {
-			pushTwo(vm, int64(idx), val)
-			call(_func, vm, 2, 0)
-		}
-	case string:
-		for idx, ch := range src {
-			pushTwo(vm, int64(idx), int64(ch))
-			call(_func, vm, 2, 0)
-		}
-	case map[interface{}]interface{}:
-		for k, v := range src {
-			pushTwo(vm, k, v)
-			call(_func, vm, 2, 0)
-		}
-	case []byte:
-		for idx, val := range src {
-			pushTwo(vm, int64(idx), int64(val))
-			call(_func, vm, 2, 0)
-		}
-	default:
-		panic("") // TODO
-	}
-	return 0
-}
-
 func builtinClone(argCnt int, vm *VM) (retCnt int) {
 	if argCnt != 1 {
 		panic("") // TODO
@@ -456,7 +422,7 @@ func print(val interface{}) {
 	case *builtinFunc:
 		fmt.Printf("<builtin:\"%s\">", val.name)
 	case string:
-		fmt.Printf("\"%s\"", val)
+		fmt.Printf("%s", val)
 	case map[interface{}]interface{}:
 		fmt.Printf("Object{")
 		i := 0
