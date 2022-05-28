@@ -11,6 +11,7 @@ type builtinFunc struct {
 	name    string
 }
 
+// if modify the following, should modify builtinFuncs in context.go too
 var builtinFuncs = []builtinFunc{
 	{builtinPrint, "print"},
 	{builtinLen, "len"},
@@ -24,6 +25,96 @@ var builtinFuncs = []builtinFunc{
 	{builtinBufferReadNumber, "__buffer_readNumber"},
 	{builtinBufferWriteNumber, "__buffer_writeNumber"},
 	{builtinBufferToString, "__buffer_toString"},
+	{builtinBufferSlice, "__buffer_slice"},
+	{builtinBufferConcat, "__buffer_concat"},
+	{builtinBufferCopy, "__buffer_copy"},
+	{builtinBufferFrom, "__buffer_from"},
+	// {builtinOpen, "__open"},
+}
+
+// // arg1: filepath, arg2: mode(r,w,c)
+// func builtinOpen(argCnt int, vm *VM) (retCnt int) {
+// 	assertS(argCnt == 2, "")
+// 	mode, ok := vm.curProto.stack.pop().(string)
+// 	assertS(ok, "")
+// 	filepath, ok := vm.curProto.stack.pop().(string)
+// 	assertS(ok, "")
+// 	var read, write, create bool
+// 	for _, ch := range []byte(mode) {
+// 		if ch == 'r' {
+// 			read = true
+// 			continue
+// 		}
+// 		if ch == 'w' {
+// 			write = true
+// 			continue
+// 		}
+// 		if ch == 'c' {
+// 			create = true
+// 			continue
+// 		}
+// 	}
+
+// }
+
+// arg1: string
+func builtinBufferFrom(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 1, "")
+	str, ok := vm.curProto.stack.pop().(string)
+	assertS(ok, "")
+	vm.curProto.stack.Push([]byte(str))
+	return 1
+}
+
+// arg1: Buffer1, arg2: Buffer2, arg3: length, arg4: idx1, arg5: idx2
+func builtinBufferCopy(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 5, "")
+	idx2, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	idx1, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	length, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	buffer2, ok := vm.curProto.stack.pop().([]byte)
+	assertS(ok, "")
+	buffer1, ok := vm.curProto.stack.pop().([]byte)
+	assertS(ok, "")
+	copy(buffer1[idx1:], buffer2[idx2:idx2+length])
+	return 0
+}
+
+// args: Buffer,Buffer[,Buffer]
+// return: Buffer
+func builtinBufferConcat(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt >= 2, "")
+	bufs := make([][]byte, argCnt)
+	var length int
+	for i := argCnt - 1; i >= 0; i-- {
+		buf, ok := vm.curProto.stack.pop().([]byte)
+		assertS(ok, "")
+		length += len(buf)
+		bufs[i] = buf
+	}
+	result := make([]byte, 0, length)
+	for _, buf := range bufs {
+		result = append(result, buf...)
+	}
+	vm.curProto.stack.Push(result)
+	return 1
+}
+
+// arg1: Buffer, arg2: offset, arg3: length
+// return: Buffer
+func builtinBufferSlice(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 3, "argCnt should be 3")
+	length, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	offset, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	buffer, ok := vm.curProto.stack.pop().([]byte)
+	assertS(ok, "")
+	vm.curProto.stack.Push(buffer[offset : offset+length])
+	return 1
 }
 
 // arg1: Buffer, arg2: offset, arg3: length
@@ -348,6 +439,8 @@ func builtinLen(argCnt int, vm *VM) (retCnt int) {
 	case map[interface{}]interface{}:
 		length = int64(len(val))
 	case string:
+		length = int64(len(val))
+	case []byte:
 		length = int64(len(val))
 	default:
 		panic("") // TODO
