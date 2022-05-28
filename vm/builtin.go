@@ -1,7 +1,9 @@
 package vm
 
 import (
+	"encoding/binary"
 	"fmt"
+	"math"
 )
 
 type builtinFunc struct {
@@ -18,6 +20,158 @@ var builtinFuncs = []builtinFunc{
 	{builtinDelete, "delete"},
 	{builtinClone, "clone"},
 	{builtinForeach, "foreach"},
+	{builtinBufferNew, "__buffer_new"},
+	{builtinBufferReadNumber, "__buffer_readNumber"},
+	{builtinBufferWriteNumber, "__buffer_writeNumber"},
+	{builtinBufferToString, "__buffer_toString"},
+}
+
+// arg1: Buffer, arg2: offset, arg3: length
+func builtinBufferToString(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 3, "")
+	length, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	offset, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	buffer, ok := vm.curProto.stack.pop().([]byte)
+	assertS(ok, "")
+	vm.curProto.stack.Push(string(buffer[offset : offset+length]))
+	return 1
+}
+
+// arg1: Buffer, arg2: offset, arg3: size, arg4: littleEndian arg5: number
+func builtinBufferWriteNumber(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 5, "") // TODO
+	number := vm.curProto.stack.pop()
+	littleEndian, ok := vm.curProto.stack.pop().(bool)
+	assertS(ok, "")
+	size, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	offset, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "") // TODO
+	buffer, ok := vm.curProto.stack.pop().([]byte)
+	assertS(ok, "") // TODO
+
+	switch size {
+	case 1:
+		v := byte(number.(int64))
+		buffer[offset] = v
+	case 2:
+		v := uint16(number.(int64))
+		if littleEndian {
+			binary.LittleEndian.PutUint16(buffer[offset:], v)
+		} else {
+			binary.BigEndian.PutUint16(buffer[offset:], v)
+		}
+	case 4:
+		var v uint32
+		if vf, ok := number.(float64); ok {
+			v = math.Float32bits(float32(vf))
+		} else {
+			v = uint32(number.(int64))
+		}
+		if littleEndian {
+			binary.LittleEndian.PutUint32(buffer[offset:], v)
+		} else {
+			binary.BigEndian.PutUint32(buffer[offset:], v)
+		}
+	case 8:
+		var v uint64
+		if vf, ok := number.(float64); ok {
+			v = math.Float64bits(vf)
+		} else {
+			v = uint64(number.(int64))
+		}
+		if littleEndian {
+			binary.LittleEndian.PutUint64(buffer[offset:], v)
+		} else {
+			binary.BigEndian.PutUint64(buffer[offset:], v)
+		}
+	}
+	return 0
+}
+
+// arg1: Buffer, arg2: offset, arg3: size, arg4: signed arg5: littleEndian arg6: isFloat
+func builtinBufferReadNumber(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 6, "") // TODO
+	isFloat, ok := vm.curProto.stack.pop().(bool)
+	assertS(ok, "")
+	littleEndian, ok := vm.curProto.stack.pop().(bool)
+	assertS(ok, "")
+	signed, ok := vm.curProto.stack.pop().(bool)
+	assertS(ok, "") // TODO
+	size, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "")
+	offset, ok := vm.curProto.stack.pop().(int64)
+	assertS(ok, "") // TODO
+	buffer, ok := vm.curProto.stack.pop().([]byte)
+	assertS(ok, "") // TODO
+	var result interface{}
+	switch size {
+	case 1:
+		var v uint8 = buffer[offset]
+		if signed {
+			result = int64(int8(v))
+		} else {
+			result = int64(v)
+		}
+	case 2:
+		var v uint16
+		if littleEndian {
+			v = binary.LittleEndian.Uint16(buffer[offset:])
+		} else {
+			v = binary.BigEndian.Uint16(buffer[offset:])
+		}
+		if signed {
+			result = int64(int16(v))
+		} else {
+			result = int64(v)
+		}
+	case 4:
+		var v uint32
+		if littleEndian {
+			v = binary.LittleEndian.Uint32(buffer[offset:])
+		} else {
+			v = binary.BigEndian.Uint32(buffer[offset:])
+		}
+		if isFloat {
+			result = float64(math.Float32frombits(v))
+			break
+		}
+		if signed {
+			result = int64(int32(v))
+		} else {
+			result = int64(v)
+		}
+	case 8:
+		var v uint64
+		if littleEndian {
+			v = binary.LittleEndian.Uint64(buffer[offset:])
+		} else {
+			v = binary.BigEndian.Uint64(buffer[offset:])
+		}
+		if isFloat {
+			result = float64(math.Float64frombits(v))
+			break
+		}
+		result = int64(v) // TODO uint64 to int64 may overflow
+	default:
+		panic("") // TODO
+	}
+	vm.curProto.stack.Push(result)
+	return 1
+}
+
+func builtinBufferNew(argCnt int, vm *VM) (retCnt int) {
+	if argCnt != 1 {
+		panic("") // TODO
+	}
+	capacity, ok := vm.curProto.stack.pop().(int64)
+	if !ok {
+		panic("") // TODO
+	}
+	vm.curProto.stack.Push(make([]byte, capacity))
+	return 1
 }
 
 func pushTwo(vm *VM, k, v interface{}) {
@@ -47,6 +201,11 @@ func builtinForeach(argCnt int, vm *VM) (retCnt int) {
 			pushTwo(vm, k, v)
 			call(_func, vm, 2, 0)
 		}
+	case []byte:
+		for idx, val := range src {
+			pushTwo(vm, int64(idx), int64(val))
+			call(_func, vm, 2, 0)
+		}
 	default:
 		panic("") // TODO
 	}
@@ -68,6 +227,10 @@ func builtinClone(argCnt int, vm *VM) (retCnt int) {
 			m[k] = v
 		}
 		vm.curProto.stack.Push(m)
+	case []byte:
+		arr := make([]byte, len(src))
+		copy(arr, src)
+		vm.curProto.stack.Push(arr)
 	default:
 		vm.curProto.stack.Push(src)
 	}
@@ -100,6 +263,8 @@ func builtinType(argCnt int, vm *VM) (retCnt int) {
 		t = "Object"
 	case *[]interface{}:
 		t = "Array"
+	case []byte:
+		t = "Buffer"
 	case int64, float64:
 		t = "Number"
 	case bool:
@@ -172,7 +337,6 @@ func builtinPrint(argCnt int, vm *VM) (retCnt int) {
 	return 0
 }
 
-// TODO Buffer?
 func builtinLen(argCnt int, vm *VM) (retCnt int) {
 	if argCnt != 1 {
 		panic("") // TODO
@@ -222,7 +386,15 @@ func print(val interface{}) {
 			}
 		}
 		fmt.Printf("]")
+	case []byte:
+		fmt.Printf("<Buffer>")
 	default:
 		fmt.Printf("%v", val)
+	}
+}
+
+func assertS(condition bool, str string) {
+	if !condition {
+		panic(str)
 	}
 }

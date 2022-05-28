@@ -292,12 +292,16 @@ type label struct {
 }
 
 var builtinFuncs = map[string]uint32{
-	"print":   0,
-	"len":     1,
-	"append":  2,
-	"sub":     3,
-	"type":    4,
-	"delete":  5,
-	"clone":   6,
-	"foreach": 7,
+	"print":                0,
+	"len":                  1,
+	"append":               2,
+	"sub":                  3,
+	"type":                 4,
+	"delete":               5,
+	"clone":                6,
+	"foreach":              7,
+	"__buffer_new":         8,
+	"__buffer_readNumber":  9,
+	"__buffer_writeNumber": 10,
+	"__buffer_toString":    11,
 }
