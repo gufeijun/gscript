@@ -11,5 +11,6 @@ func main() {
 		panic(err)
 	}
 	v := vm.NewVM(protos)
-	v.Debug()
+	v.Run()
+	// v.Debug()
 }
