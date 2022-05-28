@@ -76,25 +76,25 @@ class Buffer{
         return __buffer_readNumber(this._buffer, offset, 8, false, false, true);
     }
     write8(offset, number) {
-        return __buffer_writeNumber(this._buffer, offset, 1, false, number);
+        __buffer_writeNumber(this._buffer, offset, 1, false, number);
     }
     write16BE(offset, number) {
-        return __buffer_writeNumber(this._buffer, offset, 2, false, number);
+        __buffer_writeNumber(this._buffer, offset, 2, false, number);
     }
     write16LE(offset, number) {
-        return __buffer_writeNumber(this._buffer, offset, 2, true, number);
+        __buffer_writeNumber(this._buffer, offset, 2, true, number);
     }
     write32BE(offset, number) {
-        return __buffer_writeNumber(this._buffer, offset, 4, false, number);
+        __buffer_writeNumber(this._buffer, offset, 4, false, number);
     }
     write32LE(offset, number) {
-        return __buffer_writeNumber(this._buffer, offset, 4, true, number);
+        __buffer_writeNumber(this._buffer, offset, 4, true, number);
     }
     write64BE(offset, number) {
-        return __buffer_writeNumber(this._buffer, offset, 8, false, number);
+        __buffer_writeNumber(this._buffer, offset, 8, false, number);
     }
     write64LE(offset, number) {
-        return __buffer_writeNumber(this._buffer, offset, 8, true, number);
+        __buffer_writeNumber(this._buffer, offset, 8, true, number);
     }
 }
 
