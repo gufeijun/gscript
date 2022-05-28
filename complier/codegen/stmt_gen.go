@@ -13,8 +13,11 @@ type Import struct {
 	Alias       string
 }
 
-func Gen(parser *parser.Parser, prog *ast.Program, imports []Import, mainProto bool) proto.Proto {
+func Gen(parser *parser.Parser, prog *ast.Program, imports []Import, protoNum uint32) proto.Proto {
+	// number of main proto is zero
+	mainProto := protoNum == 0
 	ctx := newContext(parser)
+	ctx.protoNum = protoNum
 
 	genImports(imports, ctx)
 	// make all enum and class statements global

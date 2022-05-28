@@ -9,10 +9,11 @@ import (
 )
 
 type Context struct {
-	parser  *parser.Parser
-	ct      *ConstTable
-	ft      *FuncTable
-	classes map[string]uint32 // class name -> FuncTable index
+	protoNum uint32
+	parser   *parser.Parser
+	ct       *ConstTable
+	ft       *FuncTable
+	classes  map[string]uint32 // class name -> FuncTable index
 
 	frame *StackFrame
 }
@@ -141,6 +142,7 @@ func (ctx *Context) insJumpAbs(addr uint32) int {
 func (ctx *Context) insLoadConst(c interface{}) {
 	idx := ctx.ct.Get(c)
 	ctx.writeIns(proto.INS_LOAD_CONST)
+	ctx.writeUint(ctx.protoNum)
 	ctx.writeUint(idx)
 }
 
@@ -150,11 +152,13 @@ func (ctx *Context) insLoadNil() {
 
 func (ctx *Context) insLoadFunc(idx uint32) {
 	ctx.writeIns(proto.INS_LOAD_FUNC)
+	ctx.writeUint(ctx.protoNum)
 	ctx.writeUint(idx)
 }
 
 func (ctx *Context) insLoadAnonymous(idx uint32) {
 	ctx.writeIns(proto.INS_LOAD_ANONYMOUS)
+	ctx.writeUint(ctx.protoNum)
 	ctx.writeUint(idx)
 }
 
@@ -225,6 +229,7 @@ func (ctx *Context) insLoadName(name string) {
 	idx, ok = ctx.ct.getEnum(name)
 	if ok {
 		ctx.writeIns(proto.INS_LOAD_CONST)
+		ctx.writeUint(ctx.protoNum)
 		ctx.writeUint(idx)
 		return
 	}
@@ -304,4 +309,9 @@ var builtinFuncs = map[string]uint32{
 	"__buffer_readNumber":  9,
 	"__buffer_writeNumber": 10,
 	"__buffer_toString":    11,
+	"__buffer_slice":       12,
+	"__buffer_concat":      13,
+	"__buffer_copy":        14,
+	"__buffer_from":        15,
+	"__open":               16,
 }

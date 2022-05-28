@@ -73,8 +73,7 @@ func complie(code []byte, n *node, graph *graph) error {
 		}
 	}
 
-	mainProto := n.protoNum == 0
-	proto := codegen.Gen(parser, prog, imports, mainProto)
+	proto := codegen.Gen(parser, prog, imports, n.protoNum)
 	proto.FilePath = n.pathname
 	n.proto = &proto
 
