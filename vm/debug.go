@@ -92,7 +92,12 @@ func debugShowFunc(vm *VM, args []string) {
 
 func debugShowConstant(vm *VM, args []string) {
 	fmt.Printf("constants: ")
-	for i, value := range vm.curProto.constTable {
+	if len(args) == 0 {
+		return
+	}
+	var num int
+	fmt.Sscanf(args[0], "%d", &num)
+	for i, value := range vm.protos[num].Consts {
 		showValue(value)
 		if i != len(vm.curProto.frame.symbolTable.values)-1 {
 			fmt.Printf(", ")
@@ -271,30 +276,46 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 	case proto.INS_LOAD_NIL:
 		fmt.Printf("LOAD_NIL")
 	case proto.INS_LOAD_CONST:
-		fmt.Printf("LOAD_CONST %v", vm.curProto.constTable[getOpNum(text, pc)])
-		skip += 4
+		pc++
+		protoNum := getOpNum(text, pc)
+		pc += 4
+		constNum := getOpNum(text, pc)
+		fmt.Printf("LOAD_CONST %v", vm.protos[protoNum].Consts[constNum])
+		skip += 8
 	case proto.INS_LOAD_NAME:
+		pc++
 		fmt.Printf("LOAD_NAME %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_LOAD_FUNC:
-		fmt.Printf("LOAD_FUNC %d", getOpNum(text, pc))
-		skip += 4
+		pc++
+		protoNum := getOpNum(text, pc)
+		pc += 4
+		fmt.Printf("LOAD_FUNC %d %d", protoNum, getOpNum(text, pc))
+		skip += 8
 	case proto.INS_LOAD_ANONYMOUS:
-		fmt.Printf("LOAD_ANONYMOUS %d", getOpNum(text, pc))
-		skip += 4
+		pc++
+		protoNum := getOpNum(text, pc)
+		pc += 4
+		fmt.Printf("LOAD_ANONYMOUS %d %d", protoNum, getOpNum(text, pc))
+		skip += 8
 	case proto.INS_LOAD_UPVALUE:
+		pc++
 		fmt.Printf("LOAD_UPVALUE %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_LOAD_PROTO:
+		pc++
 		fmt.Printf("LOAD_PROTO %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_STORE_NAME:
+		pc++
 		fmt.Printf("STORE_NAME %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_STORE_UPVALUE:
+		pc++
 		fmt.Printf("STORE_UPVALUE %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_LOAD_BUILTIN:
+		pc++
 		fmt.Printf("LOAD_BUILTIN \"%s\"", builtinFuncs[getOpNum(text, pc)].name)
 		skip += 4
 	case proto.INS_STORE_KV:
@@ -309,6 +330,7 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 		fmt.Printf("CALL %d %d", wantRtnCnt, argCnt)
 		skip += 2
 	case proto.INS_RETURN:
+		pc++
 		fmt.Printf("RETURN with %d values", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_PUSH_NAME:
@@ -316,6 +338,7 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 	case proto.INS_COPY_NAME:
 		fmt.Printf("COPY_NAME")
 	case proto.INS_RESIZE_NAMETABLE:
+		pc++
 		fmt.Printf("RESIZE_NAMETABLE %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_POP_TOP:
@@ -323,11 +346,13 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 	case proto.INS_STOP:
 		fmt.Printf("STOP")
 	case proto.INS_SLICE_NEW:
+		pc++
 		fmt.Printf("SLICE_NEW %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_NEW_EMPTY_MAP:
 		fmt.Printf("NEW_EMPTY_MAP")
 	case proto.INS_NEW_MAP:
+		pc++
 		fmt.Printf("MAP_NEW %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_ATTR_ASSIGN:
@@ -351,15 +376,19 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 	case proto.INS_ATTR_ACCESS:
 		fmt.Printf("ATTR_ACCESS")
 	case proto.INS_JUMP_REL:
+		pc++
 		fmt.Printf("JUMP_REL %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_JUMP_ABS:
+		pc++
 		fmt.Printf("JUMP_ABS %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_JUMP_IF:
+		pc++
 		fmt.Printf("JUMP_IF %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_JUMP_CASE:
+		pc++
 		fmt.Printf("JUMP_CASE %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_ROT_TWO:
@@ -372,7 +401,6 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 }
 
 func getOpNum(text []proto.Instruction, pc uint32) uint32 {
-	pc++
 	_data := text[pc : pc+4]
 	data := *(*[]byte)(unsafe.Pointer((uintptr(unsafe.Pointer(&_data)))))
 	return binary.LittleEndian.Uint32(data)
