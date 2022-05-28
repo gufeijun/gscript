@@ -477,6 +477,8 @@ func (p *Parser) parseParameters() (pars []ast.Parameter, defaultValue bool) {
 				par.Default = false
 			case TOKEN_STRING, TOKEN_NUMBER:
 				par.Default = token.Value
+			case TOKEN_OP_SUB:
+				par.Default = -p.l.NextTokenKind(TOKEN_NUMBER).Value.(int64)
 			default:
 				panic("invalid default value") // TODO
 			}
