@@ -221,6 +221,8 @@ func showValue(val interface{}) {
 		fmt.Printf("%v", val.Data)
 	case *types.Buffer:
 		fmt.Printf("Buffer")
+	case *types.File:
+		fmt.Printf("File")
 	default:
 		fmt.Printf("%v", val)
 	}
