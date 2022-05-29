@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"gscript/proto"
+	"gscript/vm/types"
 	"strconv"
 )
 
@@ -183,15 +184,15 @@ func actionBinaryATTR(vm *VM) {
 	key := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
 	obj := vm.curProto.stack.Top()
-	if slice, ok := obj.(*[]interface{}); ok {
+	if arr, ok := obj.(*types.Array); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
 			panic("array index should be integer") // TODO
 		}
-		if idx > int64(len(*slice)) {
+		if idx > int64(len(arr.Data)) {
 			panic("index out of range") // TODO
 		}
-		vm.curProto.stack.Replace((*slice)[idx])
+		vm.curProto.stack.Replace(arr.Data[idx])
 		return
 	}
 	if str, ok := obj.(string); ok {
@@ -205,11 +206,11 @@ func actionBinaryATTR(vm *VM) {
 		vm.curProto.stack.Replace(int64(str[idx]))
 		return
 	}
-	if _map, ok := obj.(map[interface{}]interface{}); ok {
+	if obj, ok := obj.(*types.Object); ok {
 		if key == nil {
 			panic("map key should not be nil")
 		}
-		vm.curProto.stack.Replace(_map[key])
+		vm.curProto.stack.Replace(obj.Data[key])
 		return
 	}
 	// TODO
@@ -231,16 +232,16 @@ func actionLoadName(vm *VM) {
 func actionLoadFunc(vm *VM) {
 	f := &vm.protos[vm.getOpNum()].Funcs[vm.getOpNum()]
 	if f.UpValueTable == nil {
-		table := make([]*GsValue, 0, len(f.UpValues))
+		table := make([]*types.GsValue, 0, len(f.UpValues))
 		for _, nameIdx := range f.UpValues {
 			v := vm.curProto.topFrame.symbolTable.values[nameIdx]
 			table = append(table, v)
 		}
 		f.UpValueTable = table
 	}
-	vm.curProto.stack.Push(&Closure{
+	vm.curProto.stack.Push(&types.Closure{
 		Info:     f.Info,
-		UpValues: f.UpValueTable.([]*GsValue),
+		UpValues: f.UpValueTable.([]*types.GsValue),
 	})
 }
 
@@ -252,12 +253,12 @@ func actionLoadBuiltin(vm *VM) {
 
 func actionLoadAnonymous(vm *VM) {
 	f := &vm.protos[vm.getOpNum()].AnonymousFuncs[vm.getOpNum()]
-	closure := &Closure{
+	closure := &types.Closure{
 		Info:     f.Info,
-		UpValues: make([]*GsValue, 0, len(f.UpValues)),
+		UpValues: make([]*types.GsValue, 0, len(f.UpValues)),
 	}
 	for _, upValue := range f.UpValues {
-		var v *GsValue
+		var v *types.GsValue
 		if !upValue.DirectDependent {
 			v = vm.curProto.frame.upValues[upValue.Index]
 		} else {
@@ -269,7 +270,7 @@ func actionLoadAnonymous(vm *VM) {
 }
 
 func actionLoadUpValue(vm *VM) {
-	vm.curProto.stack.Push(vm.curProto.frame.upValues[vm.getOpNum()].value)
+	vm.curProto.stack.Push(vm.curProto.frame.upValues[vm.getOpNum()].Value)
 }
 
 func actionLoadProto(vm *VM) {
@@ -285,12 +286,12 @@ func actionStoreName(vm *VM) {
 }
 
 func actionStoreUpValue(vm *VM) {
-	vm.curProto.frame.upValues[vm.getOpNum()].value = vm.curProto.stack.Top()
+	vm.curProto.frame.upValues[vm.getOpNum()].Value = vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
 }
 
 func actionStoreKV(vm *VM) {
-	obj, ok := vm.curProto.frame.symbolTable.top().(map[interface{}]interface{})
+	obj, ok := vm.curProto.frame.symbolTable.top().(*types.Object)
 	if !ok {
 		panic("STORE_KV: target is not an object") // TODO
 	}
@@ -298,7 +299,7 @@ func actionStoreKV(vm *VM) {
 	vm.curProto.stack.Pop()
 	key := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
-	obj[key] = val
+	obj.Data[key] = val
 }
 
 func actionPushNameNil(vm *VM) {
@@ -339,12 +340,12 @@ func actionSliceNew(vm *VM) {
 		vm.curProto.stack.Pop()
 		arr[i] = val
 	}
-	vm.curProto.stack.Push(&arr)
+	vm.curProto.stack.Push(types.NewArray(arr))
 }
 
 func actionNewMap(vm *VM) {
-	m := make(map[interface{}]interface{})
 	cnt := vm.getOpNum()
+	obj := types.NewObjectN(int(cnt))
 	for i := 0; i < int(cnt); i++ {
 		val := vm.curProto.stack.Top()
 		vm.curProto.stack.Pop()
@@ -353,13 +354,13 @@ func actionNewMap(vm *VM) {
 		if key == nil {
 			panic("map key should not be nil") // TODO
 		}
-		m[key] = val
+		obj.Data[key] = val
 	}
-	vm.curProto.stack.Push(m)
+	vm.curProto.stack.Push(obj)
 }
 
 func actionNewEmptyMap(vm *VM) {
-	vm.curProto.stack.Push(map[interface{}]interface{}{})
+	vm.curProto.stack.Push(types.NewObject())
 }
 
 func actionAttrAssign(vm *VM) {
@@ -407,22 +408,22 @@ func attrAssign(vm *VM, cb func(ori, val interface{}) interface{}) {
 	vm.curProto.stack.Pop()
 	val := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
-	if slice, ok := obj.(*[]interface{}); ok {
+	if arr, ok := obj.(*types.Array); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
 			panic("array index should be integer") // TODO
 		}
-		if idx > int64(len(*slice)) {
+		if idx > int64(len(arr.Data)) {
 			panic("index out of range")
 		}
-		(*slice)[idx] = cb((*slice)[idx], val)
+		arr.Data[idx] = cb(arr.Data[idx], val)
 		return
 	}
-	if _map, ok := obj.(map[interface{}]interface{}); ok {
+	if obj, ok := obj.(*types.Object); ok {
 		if key == nil {
 			panic("map key should not be nil")
 		}
-		_map[key] = cb(_map[key], val)
+		obj.Data[key] = cb(obj.Data[key], val)
 		return
 	}
 	panic(fmt.Sprintf("do not support attr assign for %T", obj))
@@ -433,15 +434,15 @@ func actionAttrAccess(vm *VM) {
 	obj := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
 	key := vm.curProto.stack.Top()
-	if slice, ok := obj.(*[]interface{}); ok {
+	if arr, ok := obj.(*types.Array); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
 			panic("array index should be integer") // TODO
 		}
-		if idx > int64(len(*slice)) {
+		if idx > int64(len(arr.Data)) {
 			panic("index out of range")
 		}
-		vm.curProto.stack.Replace((*slice)[idx])
+		vm.curProto.stack.Replace(arr.Data[idx])
 		return
 	}
 	if str, ok := obj.(string); ok {
@@ -455,11 +456,11 @@ func actionAttrAccess(vm *VM) {
 		vm.curProto.stack.Replace(int64(str[idx]))
 		return
 	}
-	if _map, ok := obj.(map[interface{}]interface{}); ok {
+	if obj, ok := obj.(*types.Object); ok {
 		if key == nil {
 			panic("map key should not be nil")
 		}
-		vm.curProto.stack.Replace(_map[key])
+		vm.curProto.stack.Replace(obj.Data[key])
 		return
 	}
 	// TODO
@@ -494,7 +495,7 @@ func actionJumpCase(vm *VM) {
 	}
 }
 
-func callFunc(closure *Closure, vm *VM, argCnt uint32, wantRtnCnt int) {
+func callFunc(closure *types.Closure, vm *VM, argCnt uint32, wantRtnCnt int) {
 	// generate a new function call frame
 	frame := &stackFrame{
 		pc:          0,
@@ -548,7 +549,7 @@ func callBuiltin(_func *builtinFunc, vm *VM, argCnt uint32, wantRtnCnt int) {
 
 func call(_func interface{}, vm *VM, argCnt uint32, wantRtnCnt int) {
 	switch _func := _func.(type) {
-	case *Closure:
+	case *types.Closure:
 		callFunc(_func, vm, argCnt, wantRtnCnt)
 	case *builtinFunc:
 		callBuiltin(_func, vm, argCnt, wantRtnCnt)
