@@ -1,11 +1,9 @@
 package vm
 
-type symbolTable struct {
-	values []*GsValue
-}
+import "gscript/vm/types"
 
-type GsValue struct {
-	value interface{}
+type symbolTable struct {
+	values []*types.GsValue
 }
 
 func newSymbolTable() *symbolTable {
@@ -16,20 +14,20 @@ func (st *symbolTable) getValue(idx uint32) interface{} {
 	if idx >= uint32(len(st.values)) {
 		panic("index out of symbol table")
 	}
-	return st.values[idx].value
+	return st.values[idx].Value
 }
 
 func (st *symbolTable) setValue(idx uint32, val interface{}) {
 	if idx >= uint32(len(st.values)) {
 		panic("index out of symbol table")
 	}
-	st.values[idx].value = val
+	st.values[idx].Value = val
 }
 
 func (st *symbolTable) pushSymbol(val interface{}) {
-	st.values = append(st.values, &GsValue{val})
+	st.values = append(st.values, &types.GsValue{val})
 }
 
 func (st *symbolTable) top() (val interface{}) {
-	return st.values[len(st.values)-1].value
+	return st.values[len(st.values)-1].Value
 }

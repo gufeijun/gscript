@@ -1,19 +1,17 @@
 package vm
 
-import "gscript/proto"
+import (
+	"gscript/proto"
+	"gscript/vm/types"
+)
 
 type stackFrame struct {
 	prev        *stackFrame
 	symbolTable *symbolTable
 	wantRetCnt  int
 	pc          uint32
-	upValues    []*GsValue
+	upValues    []*types.GsValue
 	text        []proto.Instruction
-}
-
-type Closure struct {
-	Info     *proto.BasicInfo
-	UpValues []*GsValue
 }
 
 func newFuncFrame() *stackFrame {
