@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gscript/proto"
+	"gscript/vm/types"
 	"os"
 	"strconv"
 	"strings"
@@ -31,7 +32,7 @@ var cmds = map[string]func(vm *VM, args []string){
 func debugShowUpValue(vm *VM, args []string) {
 	fmt.Printf("upValues: ")
 	for i, v := range vm.curProto.frame.upValues {
-		fmt.Printf("%v", v.value)
+		fmt.Printf("%v", v.Value)
 		if i != len(vm.curProto.frame.upValues) {
 			fmt.Printf(", ")
 		}
@@ -39,10 +40,10 @@ func debugShowUpValue(vm *VM, args []string) {
 	fmt.Println()
 }
 
-func showFunc(upValues []*GsValue) {
+func showFunc(upValues []*types.GsValue) {
 	fmt.Printf("upvalues: [")
 	for i, upValue := range upValues {
-		showValue(upValue.value)
+		showValue(upValue.Value)
 		if i != len(upValues)-1 {
 			fmt.Printf(", ")
 		}
@@ -73,7 +74,7 @@ func debugShowFunc(vm *VM, args []string) {
 			return
 		}
 		f := vm.curProto.funcTable[num]
-		upValues, _ := f.UpValueTable.([]*GsValue)
+		upValues, _ := f.UpValueTable.([]*types.GsValue)
 		showFunc(upValues)
 		cnt := -1
 		if len(args) > 1 {
@@ -84,7 +85,7 @@ func debugShowFunc(vm *VM, args []string) {
 	}
 	for i, f := range vm.curProto.funcTable {
 		fmt.Printf("%dth: ", i)
-		upValues, _ := f.UpValueTable.([]*GsValue)
+		upValues, _ := f.UpValueTable.([]*types.GsValue)
 		showFunc(upValues)
 	}
 	fmt.Println()
@@ -154,7 +155,7 @@ func debugShowStack(vm *VM, args []string) {
 func debugShowVar(vm *VM, args []string) {
 	fmt.Printf("variables: ")
 	for i, val := range vm.curProto.frame.symbolTable.values {
-		showValue(val.value)
+		showValue(val.Value)
 		if i != len(vm.curProto.frame.symbolTable.values)-1 {
 			fmt.Printf(", ")
 		}
@@ -202,7 +203,7 @@ func showValue(val interface{}) {
 	switch val := val.(type) {
 	case string:
 		fmt.Printf("\"%s\"", val)
-	case *Closure:
+	case *types.Closure:
 		fmt.Printf("closure{")
 		fmt.Printf("upvalues: [")
 		for i, upValue := range val.UpValues {
@@ -214,8 +215,12 @@ func showValue(val interface{}) {
 		fmt.Printf("]}")
 	case *builtinFunc:
 		fmt.Printf("builtin(\"%s\")", val.name)
-	case *[]interface{}:
-		fmt.Printf("%v", *val)
+	case *types.Array:
+		fmt.Printf("%v", val.Data)
+	case *types.Object:
+		fmt.Printf("%v", val.Data)
+	case *types.Buffer:
+		fmt.Printf("Buffer")
 	default:
 		fmt.Printf("%v", val)
 	}
