@@ -1,11 +1,24 @@
-import "./buffer" as Buffer;
+import "fs"
+#import "Buffer"
 
-let b1 = Buffer.from("good");
+let filepath = "./text.txt"
 
-let b2 = Buffer.from(" morning");
+# open, create and truncate text.txt
+let file = fs.open(filepath,"wct");
 
-print(Buffer.concat(b1,b2).toString());
+# write some message into file
+file.write("hello world!\n")
+file.write("gscript is a good language!")
 
-let str1, str2= "good", " morning";
+# close file
+file.close();
 
-print(str1+str2)
+let stat = fs.stat(filepath)
+print("size of text.txt is " + stat.size + "B");
+# read all data in text.txt
+let data = fs.readFile(filepath);
+print("message of", filepath, "is:")
+print(data.toString())
+
+# remove text.txt
+fs.remove(filepath)
