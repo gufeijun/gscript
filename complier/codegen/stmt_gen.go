@@ -19,11 +19,11 @@ func Gen(parser *parser.Parser, prog *ast.Program, imports []Import, protoNum ui
 	ctx := newContext(parser)
 	ctx.protoNum = protoNum
 
-	genImports(imports, ctx)
 	// make all enum and class statements global
 	genEnumStmt(parser.EnumStmts, ctx)
 	genClassStmts(parser.ClassStmts, ctx)
 
+	genImports(imports, ctx)
 	genBlockStmts(prog.BlockStmts, ctx)
 	if !mainProto {
 		genExport(prog.Export, ctx)
