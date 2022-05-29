@@ -37,6 +37,7 @@ var builtinFuncs = []builtinFunc{
 	{builtinWrite, "__write"},
 	{builtinClose, "__close"},
 	{builtinSeek, "__seek"},
+	{builtinRemove, "__remove"},
 	{builtinFChmod, "__fchmod"},
 	{builtinChmod, "__chmod"},
 	{builtinFChown, "__fchown"},
@@ -51,6 +52,16 @@ var builtinFuncs = []builtinFunc{
 	{builtinSetEnv, "__setenv"},
 	{builtinReadDir, "__readdir"},
 	{builtinFReadDir, "__freaddir"},
+}
+
+func builtinRemove(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 1, "")
+	path, ok := pop(vm).(string)
+	assertS(ok, "")
+	if err := os.Remove(path); err != nil {
+		panic("") // TODO
+	}
+	return 0
 }
 
 // arg1: File, arg2: n
@@ -301,21 +312,17 @@ func builtinClose(argCnt int, vm *VM) (retCnt int) {
 	return 0
 }
 
-// arg1: File, arg2: Buffer, arg3: size
-// arg1: File, arg2: stringTODv
+// arg1: File, arg2: Buffer or string, arg3: size
 // return: n
 func builtinWrite(argCnt int, vm *VM) (retCnt int) {
 	var data []byte
-	if argCnt == 3 {
-		size, ok := pop(vm).(int64)
-		assertS(ok, "")
-		buff, ok := pop(vm).(*types.Buffer)
-		assertS(ok, "")
-		data = buff.Data[:size]
-	} else if argCnt == 2 {
-		str, ok := pop(vm).(string)
-		assertS(ok, "")
-		data = []byte(str)
+	size, ok := pop(vm).(int64)
+	assertS(ok, "")
+	src := pop(vm)
+	if buf, ok := src.(*types.Buffer); ok {
+		data = buf.Data[:size]
+	} else if str, ok := src.(string); ok {
+		data = []byte(str)[:size]
 	} else {
 		panic("") // TODO
 	}
@@ -797,6 +804,8 @@ func print(val interface{}) {
 		fmt.Printf("]")
 	case *types.Buffer:
 		fmt.Printf("<Buffer>")
+	case *types.File:
+		fmt.Printf("<File>")
 	default:
 		fmt.Printf("%v", val)
 	}
