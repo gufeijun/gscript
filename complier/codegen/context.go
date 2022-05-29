@@ -204,6 +204,8 @@ func tryLoadUpValue(ctx *Context, name string) (upValueIdx uint32, ok bool) {
 }
 
 func (ctx *Context) insLoadName(name string) {
+	// ctx.frame.nt.nameTable
+
 	// name is a defined variable?
 	idx, ok := searchFrame(ctx.frame, name)
 	if ok {
@@ -317,18 +319,19 @@ var builtinFuncs = map[string]uint32{
 	"__write":              17,
 	"__close":              18,
 	"__seek":               19,
-	"__fchmod":             20,
-	"__chmod":              21,
-	"__fchown":             22,
-	"__chown":              23,
-	"__fchdir":             24,
-	"__chdir":              25,
-	"__fstat":              26,
-	"__stat":               27,
-	"__rename":             28,
-	"__exit":               29,
-	"__getenv":             30,
-	"__setenv":             31,
-	"__readdir":            32,
-	"__freaddir":           33,
+	"__remove":             20,
+	"__fchmod":             21,
+	"__chmod":              22,
+	"__fchown":             23,
+	"__chown":              24,
+	"__fchdir":             25,
+	"__chdir":              26,
+	"__fstat":              27,
+	"__stat":               28,
+	"__rename":             29,
+	"__exit":               30,
+	"__getenv":             31,
+	"__setenv":             32,
+	"__readdir":            33,
+	"__freaddir":           34,
 }
