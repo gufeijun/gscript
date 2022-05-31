@@ -89,6 +89,9 @@ const (
 	TOKEN_KW_EXPORT      // export
 	TOKEN_KW_AS          // as
 	TOKEN_KW_GOTO        // goto
+	TOKEN_KW_TRY         // try
+	TOKEN_KW_CATCH       // catch
+	TOKEN_KW_FINALLY     // finally
 )
 
 var _eofToken = Token{Kind: TOKEN_EOF}
@@ -129,4 +132,7 @@ var keywords = map[string]int{
 	"export":      TOKEN_KW_EXPORT,
 	"as":          TOKEN_KW_AS,
 	"goto":        TOKEN_KW_GOTO,
+	"try":         TOKEN_KW_TRY,
+	"catch":       TOKEN_KW_CATCH,
+	"finally":     TOKEN_KW_FINALLY,
 }
