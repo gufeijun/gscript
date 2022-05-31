@@ -542,7 +542,32 @@ class A{
 		l := newLexer(src)
 		stmt := NewParser(l).parseClassStmt()
 		if !reflect.DeepEqual(stmt, wants[i]) {
-			t.Fatalf("parseReturnStmt failed: \n%s\n", src)
+			t.Fatalf("parseClassStmt failed: \n%s\n", src)
+		}
+	}
+}
+
+func TestTryCatchStmt(t *testing.T) {
+	srcs := []string{
+		`try{}catch{}finally{}`,
+		`try
+{
+}
+catch(e)
+{}
+finally{
+	i++;
+}`,
+	}
+	wants := []*TryCatchStmt{
+		{nil, "", nil, nil},
+		{nil, "e", nil, []BlockStmt{NewParser(newLexer("i++")).parseVarOpOrLabel()}},
+	}
+	for i, src := range srcs {
+		l := newLexer(src)
+		stmt := NewParser(l).parseTryCatchStmt()
+		if !reflect.DeepEqual(stmt, wants[i]) {
+			t.Fatalf("parseTryCatchStmt failed: \n%s\n", src)
 		}
 	}
 }

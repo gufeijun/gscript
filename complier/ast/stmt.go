@@ -123,3 +123,10 @@ type SwitchStmt struct {
 type ReturnStmt struct {
 	Args []Exp
 }
+
+type TryCatchStmt struct {
+	TryBlocks     []BlockStmt
+	CatchValue    string
+	CatchBlocks   []BlockStmt
+	FinallyBlocks []BlockStmt
+}

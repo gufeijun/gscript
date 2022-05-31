@@ -45,10 +45,32 @@ func (p *Parser) parseStmt(atTop bool) ast.Stmt {
 		stmt = p.parseSwitchStmt()
 	case TOKEN_OP_INC, TOKEN_OP_DEC:
 		stmt = p.parseIncOrDecVar()
+	case TOKEN_KW_TRY:
+		stmt = p.parseTryCatchStmt()
 	default:
 		panic(p.l.Line())
 	}
 	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	return stmt
+}
+
+func (p *Parser) parseTryCatchStmt() (stmt *ast.TryCatchStmt) {
+	stmt = new(ast.TryCatchStmt)
+	p.l.NextToken()
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	stmt.TryBlocks = p.parseBlock().Blocks
+	p.l.NextTokenKind(TOKEN_KW_CATCH)
+	if p.l.ConsumeIf(TOKEN_SEP_LPAREN) {
+		id := p.l.NextTokenKind(TOKEN_IDENTIFIER)
+		stmt.CatchValue = id.Content
+		p.l.NextTokenKind(TOKEN_SEP_RPAREN)
+	}
+	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	stmt.CatchBlocks = p.parseBlock().Blocks
+	if p.l.ConsumeIf(TOKEN_KW_FINALLY) {
+		p.l.ConsumeIf(TOKEN_SEP_SEMI)
+		stmt.FinallyBlocks = p.parseBlock().Blocks
+	}
 	return stmt
 }
 
