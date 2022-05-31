@@ -29,6 +29,7 @@ stmt ::= | varDeclare ';'                                       // declare varia
          | enum '{' [enumBlocks] '}' ';'
          | switch expBlock [';'] '{' caseBlocks '}'
          | incOrDecVar ';'
+         | try '{' {blockStmt} '}' catch '{ {blockStmt} '}' finally '{' {blockStmt} '}'
 
 varDeclare ::= <const|let> nameList '=' expList]
 varAssign ::= var {',' var} assignOP expList
