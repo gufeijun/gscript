@@ -120,11 +120,17 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 			genAnonymousFuncCallStmt(stmt, ctx)
 		case *ast.FuncDefStmt:
 			genFuncDefStmt(stmt, ctx)
+		case *ast.TryCatchStmt:
+			genTryCatchStmt(stmt, ctx)
 		case *ast.LoopStmt:
 			// TODO
 			panic("do not support loop statement for now")
 		case *ast.LabelStmt:
-			ctx.frame.validLabels[stmt.Name] = label{stmt.Name, ctx.textSize(), *ctx.frame.nt.nameIdx}
+			ctx.frame.validLabels[stmt.Name] = label{
+				name:          stmt.Name,
+				addr:          ctx.textSize(),
+				nameTableSize: *ctx.frame.nt.nameIdx,
+			}
 			// when exit block, make labels inside block invalid
 			defer func() { delete(ctx.frame.validLabels, stmt.Name) }()
 		case *ast.GotoStmt:
@@ -137,6 +143,28 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 	}
 	handleGoto(ctx, gotos)
 	return
+}
+
+func genTryCatchStmt(stmt *ast.TryCatchStmt, ctx *Context) {
+	ctx.frame.curTryLevel++
+	catch := ctx.insTry(0)
+	genStmtsWithBlock(stmt.TryBlocks, ctx)
+	ctx.writeIns(proto.INS_END_TRY)
+	finally := ctx.insJumpRel(0)
+	ctx.frame.curTryLevel--
+
+	ctx.setSteps(catch, ctx.textSize())
+	ctx.enterBlock()
+	size := *ctx.frame.nt.nameIdx
+	if stmt.CatchValue != "" {
+		ctx.insPushName(stmt.CatchValue)
+		genBlockStmts(stmt.CatchBlocks, ctx)
+		ctx.leaveBlock(size, true)
+	} else {
+		ctx.insPopTop()
+		ctx.leaveBlock(size, genBlockStmts(stmt.CatchBlocks, ctx))
+	}
+	ctx.setSteps(finally, ctx.textSize())
 }
 
 func genFuncDefStmt(stmt *ast.FuncDefStmt, ctx *Context) {
@@ -253,6 +281,9 @@ func handleGoto(ctx *Context, gotos []unhandledGoto) {
 }
 
 func genGotoStmt(stmt *ast.GotoStmt, ctx *Context) unhandledGoto {
+	if ctx.frame.curTryLevel != 0 {
+		panic("goto in try block is not allowed") // TODO
+	}
 	resizePos := ctx.insResizeNameTable(0)
 	jumpPos := ctx.insJumpRel(0)
 	return unhandledGoto{
@@ -271,18 +302,28 @@ func genFallthroughStmt(stmt *ast.FallthroughStmt, ctx *Context) {
 
 func genContinueStmt(stmt *ast.ContinueStmt, ctx *Context) {
 	b := ctx.frame.bs.latestFor()
+	outerTryLevel := b.curTryLevel
+	for top := ctx.frame.curTryLevel; outerTryLevel < top; outerTryLevel++ {
+		ctx.writeIns(proto.INS_END_TRY)
+	}
 	b.continues = append(b.continues, ctx.insJumpRel(0))
 }
 
 func genBreakStmt(stmt *ast.BreakStmt, ctx *Context) {
 	b := ctx.frame.bs.top()
 	var breaks *[]int
+	var outerTryLevel int
 	if fb, ok := b.(*forBlock); ok {
+		outerTryLevel = fb.curTryLevel
 		breaks = &fb.breaks
 	} else {
+		outerTryLevel = fb.curTryLevel
 		sb := b.(*switchBlock)
 		breaks = &sb.breaks
 		ctx.insResizeNameTable(sb.nameCnt)
+	}
+	for top := ctx.frame.curTryLevel; outerTryLevel < top; outerTryLevel++ {
+		ctx.writeIns(proto.INS_END_TRY)
 	}
 	*breaks = append(*breaks, ctx.insJumpRel(0))
 }
@@ -324,7 +365,7 @@ end:
 	other_code
 */
 func genSwitchStmt(stmt *ast.SwitchStmt, ctx *Context) {
-	ctx.frame.bs.pushSwitch(*ctx.frame.nt.nameIdx)
+	ctx.frame.bs.pushSwitch(*ctx.frame.nt.nameIdx, ctx.frame.curTryLevel)
 	sb := ctx.frame.bs.top().(*switchBlock)
 
 	var pos_ptrs []int
@@ -434,7 +475,7 @@ func genForStmt(stmt *ast.ForStmt, ctx *Context) {
 		varDecl = true
 	}
 	curSize := *ctx.frame.nt.nameIdx
-	ctx.frame.bs.pushFor(curSize)
+	ctx.frame.bs.pushFor(curSize, ctx.frame.curTryLevel)
 
 	p0 := ctx.textSize()
 	genExp(stmt.Condition, ctx, 1)

@@ -87,6 +87,13 @@ func (ctx *Context) insCall(wantRtnCnt byte, argCnt byte) {
 	ctx.writeByte(argCnt)
 }
 
+func (ctx *Context) insTry(catchAddr uint32) int {
+	ctx.writeIns(proto.INS_TRY)
+	pos := len(ctx.frame.text)
+	ctx.writeUint(catchAddr)
+	return pos
+}
+
 func (ctx *Context) insReturn(argCnt uint32) {
 	ctx.writeIns(proto.INS_RETURN)
 	ctx.writeUint(argCnt)
@@ -334,4 +341,5 @@ var builtinFuncs = map[string]uint32{
 	"__setenv":             32,
 	"__readdir":            33,
 	"__freaddir":           34,
+	"throw":                35,
 }

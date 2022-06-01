@@ -10,6 +10,7 @@ type StackFrame struct {
 	text        []byte
 
 	nowParsingAnonymous int
+	curTryLevel         int
 }
 
 func newStackFrame() *StackFrame {

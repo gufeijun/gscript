@@ -1,14 +1,16 @@
 package codegen
 
 type forBlock struct {
-	nameCnt   uint32
-	prev      interface{}
-	breaks    []int
-	continues []int
+	nameCnt     uint32
+	curTryLevel int
+	prev        interface{}
+	breaks      []int
+	continues   []int
 }
 
 type switchBlock struct {
 	nameCnt      uint32
+	curTryLevel  int
 	prev         interface{}
 	breaks       []int
 	_fallthrough *int
@@ -33,13 +35,13 @@ func (bs *blockStack) pop() {
 	}
 }
 
-func (bs *blockStack) pushSwitch(nameCnt uint32) {
-	b := &switchBlock{nameCnt: nameCnt, prev: bs.cur}
+func (bs *blockStack) pushSwitch(nameCnt uint32, curTryLevel int) {
+	b := &switchBlock{nameCnt: nameCnt, prev: bs.cur, curTryLevel: curTryLevel}
 	bs.cur = b
 }
 
-func (bs *blockStack) pushFor(nameCnt uint32) {
-	b := &forBlock{nameCnt: nameCnt, prev: bs.cur}
+func (bs *blockStack) pushFor(nameCnt uint32, curTryLevel int) {
+	b := &forBlock{nameCnt: nameCnt, prev: bs.cur, curTryLevel: curTryLevel}
 	bs.cur = b
 }
 
