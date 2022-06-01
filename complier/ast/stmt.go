@@ -125,8 +125,7 @@ type ReturnStmt struct {
 }
 
 type TryCatchStmt struct {
-	TryBlocks     []BlockStmt
-	CatchValue    string
-	CatchBlocks   []BlockStmt
-	FinallyBlocks []BlockStmt
+	TryBlocks   []BlockStmt
+	CatchValue  string
+	CatchBlocks []BlockStmt
 }

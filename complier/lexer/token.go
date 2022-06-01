@@ -134,5 +134,4 @@ var keywords = map[string]int{
 	"goto":        TOKEN_KW_GOTO,
 	"try":         TOKEN_KW_TRY,
 	"catch":       TOKEN_KW_CATCH,
-	"finally":     TOKEN_KW_FINALLY,
 }
