@@ -1,6 +1,8 @@
 package vm
 
-import "gscript/vm/types"
+import (
+	"gscript/vm/types"
+)
 
 type symbolTable struct {
 	values []*types.GsValue
@@ -30,4 +32,14 @@ func (st *symbolTable) pushSymbol(val interface{}) {
 
 func (st *symbolTable) top() (val interface{}) {
 	return st.values[len(st.values)-1].Value
+}
+
+func (st *symbolTable) resizeTo(size int) {
+	if size >= len(st.values) {
+		return
+	}
+	for i := size; i < len(st.values); i++ {
+		st.values[i] = nil
+	}
+	st.values = st.values[:size]
 }

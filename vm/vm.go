@@ -7,9 +7,10 @@ import (
 )
 
 type VM struct {
-	stopped  bool
-	protos   []proto.Proto
-	curProto *protoFrame
+	stopped           bool
+	protos            []proto.Proto
+	curProto          *protoFrame
+	builtinFuncFailed bool
 }
 
 func NewVM(protos []proto.Proto) *VM {

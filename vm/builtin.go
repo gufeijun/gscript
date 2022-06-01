@@ -52,6 +52,36 @@ var builtinFuncs = []builtinFunc{
 	{builtinSetEnv, "__setenv"},
 	{builtinReadDir, "__readdir"},
 	{builtinFReadDir, "__freaddir"},
+	{builtinThrow, "throw"},
+}
+
+func throw(err error, vm *VM) {
+	vm.builtinFuncFailed = true
+	push(vm, err.Error())
+	_throw(vm)
+}
+
+func _throw(vm *VM) {
+	for {
+		frame := vm.curProto.frame
+		tryInfos := frame.tryInfos
+		if len(tryInfos) > 0 {
+			catchAddr, varCnt := frame.popTryInfo()
+			frame.symbolTable.resizeTo(int(varCnt))
+			frame.pc = catchAddr
+			break
+		}
+		if frame.prev == nil {
+			panic("uncatched exception") // TODO
+		}
+		vm.curProto.frame = frame.prev
+	}
+}
+
+func builtinThrow(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 1, "")
+	_throw(vm)
+	return 0
 }
 
 func builtinRemove(argCnt int, vm *VM) (retCnt int) {
@@ -59,7 +89,7 @@ func builtinRemove(argCnt int, vm *VM) (retCnt int) {
 	path, ok := pop(vm).(string)
 	assertS(ok, "")
 	if err := os.Remove(path); err != nil {
-		panic("") // TODO
+		throw(err, vm)
 	}
 	return 0
 }
@@ -169,7 +199,8 @@ func builtinStat(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	stat, err := os.Stat(path)
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 1
 	}
 	push(vm, newStat(stat))
 	return 1
@@ -406,7 +437,8 @@ func builtinOpen(argCnt int, vm *VM) (retCnt int) {
 
 	file, err := os.OpenFile(filepath, flag, os.FileMode(uint32(mode)))
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 1
 	}
 	push(vm, types.NewFile(file))
 	return 1

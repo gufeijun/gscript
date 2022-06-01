@@ -69,6 +69,8 @@ var actions = []func(vm *VM){
 	actionReturn,
 	actionRotTwo,
 	actionExport,
+	actionTry,
+	actionEndTry,
 }
 
 func actionUnaryNOT(vm *VM) {
@@ -316,12 +318,7 @@ func actionCopyName(vm *VM) {
 }
 
 func actionResizeNameTable(vm *VM) {
-	length := int(vm.getOpNum())
-	st := vm.curProto.frame.symbolTable
-	if length >= len(st.values) {
-		return
-	}
-	st.values = st.values[:length]
+	vm.curProto.frame.symbolTable.resizeTo(int(vm.getOpNum()))
 }
 
 func actionPopTop(vm *VM) {
@@ -537,6 +534,10 @@ func callFunc(closure *types.Closure, vm *VM, argCnt uint32, wantRtnCnt int) {
 
 func callBuiltin(_func *builtinFunc, vm *VM, argCnt uint32, wantRtnCnt int) {
 	realRtnCnt := _func.handler(int(argCnt), vm)
+	if vm.builtinFuncFailed {
+		vm.builtinFuncFailed = false
+		return
+	}
 	for wantRtnCnt < realRtnCnt {
 		vm.curProto.stack.Pop()
 		wantRtnCnt++
@@ -602,6 +603,16 @@ func actionExport(vm *VM) {
 	}
 	vm.curProto = vm.curProto.prev
 	vm.curProto.stack.Push(val)
+}
+
+func actionTry(vm *VM) {
+	steps := vm.getOpNum()
+	addr := vm.curProto.frame.pc + steps
+	vm.curProto.frame.pushTryInfo(addr, uint32(len(vm.curProto.frame.symbolTable.values)))
+}
+
+func actionEndTry(vm *VM) {
+	vm.curProto.frame.popTryInfo()
 }
 
 func Execute(vm *VM, ins proto.Instruction) {

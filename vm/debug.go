@@ -384,7 +384,7 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 		fmt.Printf("ATTR_ACCESS")
 	case proto.INS_JUMP_REL:
 		pc++
-		fmt.Printf("JUMP_REL %d", getOpNum(text, pc))
+		fmt.Printf("JUMP_REL %d", int32(getOpNum(text, pc)))
 		skip += 4
 	case proto.INS_JUMP_ABS:
 		pc++
@@ -402,6 +402,12 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 		fmt.Printf("ROT_TWO")
 	case proto.INS_EXPORT:
 		fmt.Printf("EXPORT")
+	case proto.INS_TRY:
+		pc++
+		fmt.Printf("TRY %d", getOpNum(text, pc))
+		skip += 4
+	case proto.INS_END_TRY:
+		fmt.Printf("END_TRY")
 	}
 	fmt.Println()
 	return uint32(skip)
