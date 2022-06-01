@@ -104,22 +104,28 @@ func builtinFReadDir(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	entrys, err := file.File.ReadDir(int(n))
 	if err != nil {
-		panic(err)
+		throw(err, vm)
+		return 0
 	}
-	push(vm, newDirEntryObjects(entrys))
+	arr, err := newDirEntryObjects(entrys)
+	if err != nil {
+		throw(err, vm)
+		return 0
+	}
+	push(vm, arr)
 	return 1
 }
 
-func newDirEntryObjects(entrys []fs.DirEntry) *types.Array {
+func newDirEntryObjects(entrys []fs.DirEntry) (*types.Array, error) {
 	arr := make([]interface{}, 0, len(entrys))
 	for _, entry := range entrys {
 		info, err := entry.Info()
 		if err != nil {
-			panic("") // TODO
+			return nil, err
 		}
 		arr = append(arr, newStat(info))
 	}
-	return types.NewArray(arr)
+	return types.NewArray(arr), nil
 }
 
 // arg1: pathname
@@ -130,9 +136,15 @@ func builtinReadDir(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	entrys, err := os.ReadDir(pathname)
 	if err != nil {
-		panic("") // TODO
+		throw(err, vm)
+		return 0
 	}
-	push(vm, newDirEntryObjects(entrys))
+	arr, err := newDirEntryObjects(entrys)
+	if err != nil {
+		throw(err, vm)
+		return 0
+	}
+	push(vm, arr)
 	return 1
 }
 
@@ -144,7 +156,8 @@ func builtinSetEnv(argCnt int, vm *VM) (retCnt int) {
 	key, ok := pop(vm).(string)
 	assertS(ok, "")
 	if err := os.Setenv(key, value); err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	return 0
 }
@@ -176,7 +189,7 @@ func builtinRename(argCnt int, vm *VM) (retCnt int) {
 	oldpath, ok := pop(vm).(string)
 	assertS(ok, "")
 	if err := os.Rename(oldpath, newpath); err != nil {
-		panic(err)
+		throw(err, vm)
 	}
 	return 0
 }
@@ -200,7 +213,7 @@ func builtinStat(argCnt int, vm *VM) (retCnt int) {
 	stat, err := os.Stat(path)
 	if err != nil {
 		throw(err, vm)
-		return 1
+		return 0
 	}
 	push(vm, newStat(stat))
 	return 1
@@ -214,7 +227,8 @@ func builtinFStat(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	stat, err := file.File.Stat()
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	push(vm, newStat(stat))
 	return 1
@@ -228,7 +242,8 @@ func builtinFChdir(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	err := file.File.Chdir()
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	return 0
 }
@@ -244,7 +259,8 @@ func builtinFChown(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	err := file.File.Chown(int(uid), int(gid))
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	return 0
 }
@@ -258,7 +274,8 @@ func builtinFChmod(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	err := file.File.Chmod(os.FileMode(uint32(mode)))
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	return 0
 }
@@ -270,7 +287,8 @@ func builtinChdir(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	err := os.Chdir(path)
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	return 0
 }
@@ -286,7 +304,8 @@ func builtinChown(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	err := os.Chown(path, int(uid), int(gid))
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	return 0
 }
@@ -300,7 +319,8 @@ func builtinChmod(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	err := os.Chmod(file, os.FileMode(uint32(mode)))
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	return 0
 }
@@ -328,7 +348,8 @@ func builtinSeek(argCnt int, vm *VM) (retCnt int) {
 
 	n, err := file.File.Seek(offset, whence)
 	if err != nil {
-		panic(err) // TODO
+		throw(err, vm)
+		return 0
 	}
 	push(vm, int64(n))
 	return 1
@@ -339,7 +360,9 @@ func builtinClose(argCnt int, vm *VM) (retCnt int) {
 	assertS(argCnt == 1, "")
 	file, ok := pop(vm).(*types.File)
 	assertS(ok, "")
-	file.File.Close()
+	if err := file.File.Close(); err != nil {
+		throw(err, vm)
+	}
 	return 0
 }
 
@@ -361,7 +384,8 @@ func builtinWrite(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	n, err := file.File.Write(data)
 	if err != nil {
-		panic("read failed") // TODO
+		throw(err, vm)
+		return 0
 	}
 	push(vm, int64(n))
 	return 1
@@ -379,7 +403,8 @@ func builtinRead(argCnt int, vm *VM) (retCnt int) {
 	assertS(ok, "")
 	n, err := file.File.Read(buff.Data[:size])
 	if err != nil {
-		panic("read failed") // TODO
+		throw(err, vm)
+		return 0
 	}
 	push(vm, int64(n))
 	return 1
@@ -438,7 +463,7 @@ func builtinOpen(argCnt int, vm *VM) (retCnt int) {
 	file, err := os.OpenFile(filepath, flag, os.FileMode(uint32(mode)))
 	if err != nil {
 		throw(err, vm)
-		return 1
+		return 0
 	}
 	push(vm, types.NewFile(file))
 	return 1
