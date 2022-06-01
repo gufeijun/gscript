@@ -549,19 +549,17 @@ class A{
 
 func TestTryCatchStmt(t *testing.T) {
 	srcs := []string{
-		`try{}catch{}finally{}`,
+		`try{}catch{}`,
 		`try
 {
 }
 catch(e)
 {}
-finally{
-	i++;
-}`,
+`,
 	}
 	wants := []*TryCatchStmt{
-		{nil, "", nil, nil},
-		{nil, "e", nil, []BlockStmt{NewParser(newLexer("i++")).parseVarOpOrLabel()}},
+		{nil, "", nil},
+		{nil, "e", nil},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)

@@ -61,16 +61,13 @@ func (p *Parser) parseTryCatchStmt() (stmt *ast.TryCatchStmt) {
 	stmt.TryBlocks = p.parseBlock().Blocks
 	p.l.NextTokenKind(TOKEN_KW_CATCH)
 	if p.l.ConsumeIf(TOKEN_SEP_LPAREN) {
-		id := p.l.NextTokenKind(TOKEN_IDENTIFIER)
-		stmt.CatchValue = id.Content
+		if p.l.Expect(TOKEN_IDENTIFIER) {
+			stmt.CatchValue = p.l.NextToken().Content
+		}
 		p.l.NextTokenKind(TOKEN_SEP_RPAREN)
 	}
 	p.l.ConsumeIf(TOKEN_SEP_SEMI)
 	stmt.CatchBlocks = p.parseBlock().Blocks
-	if p.l.ConsumeIf(TOKEN_KW_FINALLY) {
-		p.l.ConsumeIf(TOKEN_SEP_SEMI)
-		stmt.FinallyBlocks = p.parseBlock().Blocks
-	}
 	return stmt
 }
 
