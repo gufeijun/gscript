@@ -47,12 +47,25 @@ var builtinFuncs = []builtinFunc{
 	{builtinFStat, "__fstat"},
 	{builtinStat, "__stat"},
 	{builtinRename, "__rename"},
+	{builtinMkdir, "__mkdir"},
 	{builtinExit, "__exit"},
 	{builtinGetEnv, "__getenv"},
 	{builtinSetEnv, "__setenv"},
 	{builtinReadDir, "__readdir"},
 	{builtinFReadDir, "__freaddir"},
 	{builtinThrow, "throw"},
+}
+
+func builtinMkdir(argCnt int, vm *VM) (retCnt int) {
+	assertS(argCnt == 2, "")
+	mode, ok := pop(vm).(int64)
+	assertS(ok, "")
+	str, ok := pop(vm).(string)
+	assertS(ok, "")
+	if err := os.Mkdir(str, os.FileMode(uint32(mode))); err != nil {
+		throw(err, vm)
+	}
+	return 0
 }
 
 func throw(err error, vm *VM) {
