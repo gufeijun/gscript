@@ -19,6 +19,32 @@ class File{
     close() {
         __close(this._file);
     }
+    # whence = cur, end or start
+    seek(offset, whence="cur") {
+        return __seek(this._file, offset, whence);
+    }
+    chmod(mode) {
+        __fchmod(this._file, mode);
+    }
+    chown(uid, gid) {
+        __fchown(this._file, uid, gid);
+    }
+    chdir() {
+        __fchdir(this._file);
+    }
+    stat() {
+        if (this._stat == nil)
+            this._stat = __fstat(this._file); 
+        return this._stat;
+    }
+    isDir() {
+        if this._stat == nil 
+            this.stat();
+        return this._stat.is_dir;
+    }
+    readDir(n) {
+        return __freaddir(this._file, n);
+    }
 }
 
 export {
@@ -43,5 +69,20 @@ export {
         let n = __read(file, buf._buffer, size);
         __close(file);
         return buf, n;
+    },
+    mkdir: func(dir, mode=0664) {
+        __mkdir(dir, mode);
+    },
+    chmod: func(path, mode) {
+        __chmod(path, mode);
+    },
+    chown: func(path, uid, gid) {
+        __chown(path, uid, gid);
+    },
+    rename: func(oldpath, newpath) {
+        __rename(oldpath, newpath);
+    },
+    readDir: func(path) {
+        return __readdir(path);
     },
 }
