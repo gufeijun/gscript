@@ -119,8 +119,19 @@ func genTernaryOpExp(exp *ast.TernaryOpExp, ctx *Context) {
 
 func genBinOpExp(exp *ast.BinOpExp, ctx *Context) {
 	genExp(exp.Exp1, ctx, 1)
-	genExp(exp.Exp2, ctx, 1)
-	ctx.writeIns(byte(exp.BinOp-ast.BINOP_START) + proto.INS_BINARY_START)
+	switch exp.BinOp {
+	case ast.BINOP_LAND:
+		pos := ctx.insJumpIfLAnd(0)
+		genExp(exp.Exp2, ctx, 1)
+		ctx.setSteps(pos, ctx.textSize())
+	case ast.BINOP_LOR:
+		pos := ctx.insJumpIfLOr(0)
+		genExp(exp.Exp2, ctx, 1)
+		ctx.setSteps(pos, ctx.textSize())
+	default:
+		genExp(exp.Exp2, ctx, 1)
+		ctx.writeIns(byte(exp.BinOp-ast.BINOP_START) + proto.INS_BINARY_START)
+	}
 }
 
 func genUnOpExp(exp *ast.UnOpExp, ctx *Context) {

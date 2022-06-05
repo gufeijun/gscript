@@ -394,6 +394,14 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 		pc++
 		fmt.Printf("JUMP_IF %d", getOpNum(text, pc))
 		skip += 4
+	case proto.INS_JUMP_LAND:
+		pc++
+		fmt.Printf("JUMP_LAND %d", getOpNum(text, pc))
+		skip += 4
+	case proto.INS_JUMP_LOR:
+		pc++
+		fmt.Printf("JUMP_LOR %d", getOpNum(text, pc))
+		skip += 4
 	case proto.INS_JUMP_CASE:
 		pc++
 		fmt.Printf("JUMP_CASE %d", getOpNum(text, pc))

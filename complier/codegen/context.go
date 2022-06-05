@@ -125,6 +125,20 @@ func (ctx *Context) insJumpCase(addr uint32) int {
 	return pos
 }
 
+func (ctx *Context) insJumpIfLAnd(addr uint32) int {
+	ctx.writeIns(proto.INS_JUMP_LAND)
+	pos := len(ctx.frame.text)
+	ctx.writeUint(addr - uint32(pos+4))
+	return pos
+}
+
+func (ctx *Context) insJumpIfLOr(addr uint32) int {
+	ctx.writeIns(proto.INS_JUMP_LOR)
+	pos := len(ctx.frame.text)
+	ctx.writeUint(addr - uint32(pos+4))
+	return pos
+}
+
 func (ctx *Context) insJumpIf(addr uint32) int {
 	ctx.writeIns(proto.INS_JUMP_IF)
 	pos := len(ctx.frame.text)

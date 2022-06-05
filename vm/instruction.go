@@ -64,6 +64,8 @@ var actions = []func(vm *VM){
 	actionJumpRel,
 	actionJumpAbs,
 	actionJumpIf,
+	actionJumpLAnd,
+	actionJumpLOr,
 	actionJumpCase,
 	actionCall,
 	actionReturn,
@@ -479,6 +481,28 @@ func actionJumpIf(vm *VM) {
 	steps := vm.getOpNum()
 	if getBool(top) {
 		vm.curProto.frame.pc += steps
+	}
+}
+
+func actionJumpLAnd(vm *VM) {
+	steps := vm.getOpNum()
+	top := vm.curProto.stack.Top()
+	cond := getBool(top)
+	if cond {
+		vm.curProto.stack.Pop()
+	} else {
+		vm.curProto.frame.pc += steps
+	}
+}
+
+func actionJumpLOr(vm *VM) {
+	steps := vm.getOpNum()
+	top := vm.curProto.stack.Top()
+	cond := getBool(top)
+	if cond {
+		vm.curProto.frame.pc += steps
+	} else {
+		vm.curProto.stack.Pop()
 	}
 }
 
