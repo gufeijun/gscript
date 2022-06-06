@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"unsafe"
 )
 
 var cmds = map[string]func(vm *VM, args []string){
@@ -113,7 +112,7 @@ func debugRun(vm *VM, args []string) {
 			return
 		}
 		instruction := vm.curProto.frame.text[vm.curProto.frame.pc]
-		if instruction == proto.Instruction(proto.INS_STOP) {
+		if instruction == proto.INS_STOP {
 			break
 		}
 		vm.curProto.frame.pc++
@@ -133,7 +132,7 @@ func debugShowCode(vm *VM, args []string) {
 	showCode(vm, vm.curProto.frame.text, start, cnt)
 }
 
-func showCode(vm *VM, text []proto.Instruction, pc uint32, cnt int) {
+func showCode(vm *VM, text []byte, pc uint32, cnt int) {
 	for i := 0; ; i++ {
 		if int(pc) >= len(text) || i == cnt {
 			break
@@ -229,7 +228,7 @@ func showValue(val interface{}) {
 
 }
 
-func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
+func showInstruction(vm *VM, text []byte, pc uint32) uint32 {
 	skip := 1
 	ins := byte(text[pc])
 	fmt.Printf("%d	\t", pc)
@@ -421,8 +420,7 @@ func showInstruction(vm *VM, text []proto.Instruction, pc uint32) uint32 {
 	return uint32(skip)
 }
 
-func getOpNum(text []proto.Instruction, pc uint32) uint32 {
-	_data := text[pc : pc+4]
-	data := *(*[]byte)(unsafe.Pointer((uintptr(unsafe.Pointer(&_data)))))
+func getOpNum(text []byte, pc uint32) uint32 {
+	data := text[pc : pc+4]
 	return binary.LittleEndian.Uint32(data)
 }

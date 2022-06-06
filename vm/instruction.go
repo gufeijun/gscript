@@ -2,7 +2,6 @@ package vm
 
 import (
 	"fmt"
-	"gscript/proto"
 	"gscript/vm/types"
 	"strconv"
 )
@@ -639,7 +638,7 @@ func actionEndTry(vm *VM) {
 	vm.curProto.frame.popTryInfo()
 }
 
-func Execute(vm *VM, ins proto.Instruction) {
+func Execute(vm *VM, ins byte) {
 	actions[ins](vm)
 }
 

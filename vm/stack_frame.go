@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"gscript/proto"
 	"gscript/vm/types"
 )
 
@@ -11,7 +10,7 @@ type stackFrame struct {
 	wantRetCnt  int
 	pc          uint32
 	upValues    []*types.GsValue
-	text        []proto.Instruction
+	text        []byte
 	tryInfos    []tryInfo
 }
 
