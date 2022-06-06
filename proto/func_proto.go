@@ -5,7 +5,7 @@ import "gscript/complier/ast"
 type BasicInfo struct {
 	VaArgs     bool
 	Parameters []ast.Parameter
-	Text       []Instruction
+	Text       []byte
 }
 
 type FuncProto struct {

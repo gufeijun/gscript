@@ -5,7 +5,6 @@ import (
 	"gscript/complier/ast"
 	"gscript/complier/parser"
 	"gscript/proto"
-	"unsafe"
 )
 
 type Import struct {
@@ -32,7 +31,7 @@ func Gen(parser *parser.Parser, prog *ast.Program, imports []Import, protoNum ui
 	}
 
 	return proto.Proto{
-		Text:           bytesToInstructions(ctx.frame.text),
+		Text:           ctx.frame.text,
 		Consts:         ctx.ct.Constants,
 		Funcs:          ctx.ft.funcTable,
 		AnonymousFuncs: ctx.ft.anonymousFuncs,
@@ -58,7 +57,7 @@ func genImports(imports []Import, ctx *Context) {
 func genClassStmts(stmts []*ast.ClassStmt, ctx *Context) {
 	for i, stmt := range stmts {
 		genClassStmt(stmt, ctx)
-		ctx.ft.anonymousFuncs[i].Info.Text = bytesToInstructions(ctx.frame.text)
+		ctx.ft.anonymousFuncs[i].Info.Text = ctx.frame.text
 		ctx.frame = newStackFrame()
 	}
 }
@@ -193,23 +192,19 @@ func genFuncLiteral(literal *ast.FuncLiteral, ctx *Context, idx uint32, anonymou
 	bindUpValue(ctx, idx, anonymous)
 }
 
-func bytesToInstructions(text []byte) []proto.Instruction {
-	return *((*[]proto.Instruction)(unsafe.Pointer(&text)))
-}
-
 func bindUpValue(ctx *Context, funcIdx uint32, anonymous bool) {
 	oldFrame := ctx.popFrame()
 	upValues := oldFrame.vt.upValues
 
 	if anonymous {
-		ctx.ft.anonymousFuncs[ctx.frame.nowParsingAnonymous].Info.Text = bytesToInstructions(oldFrame.text)
+		ctx.ft.anonymousFuncs[ctx.frame.nowParsingAnonymous].Info.Text = oldFrame.text
 		ft := ctx.ft.anonymousFuncs
 		for _, upValue := range upValues {
 			vptr := getUpValueIdx(ctx.frame, ctx, &upValue)
 			ft[funcIdx].UpValues = append(ft[funcIdx].UpValues, vptr)
 		}
 	} else {
-		ctx.ft.funcTable[funcIdx].Info.Text = bytesToInstructions(oldFrame.text)
+		ctx.ft.funcTable[funcIdx].Info.Text = oldFrame.text
 		ft := ctx.ft.funcTable
 		for _, upValue := range upValues {
 			ft[funcIdx].UpValues = append(ft[funcIdx].UpValues, upValue.nameIdx)
