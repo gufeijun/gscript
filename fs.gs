@@ -38,7 +38,7 @@ class File{
         return this._stat;
     }
     isDir() {
-        if this._stat == nil 
+        if (this._stat == nil)
             this.stat();
         return this._stat.is_dir;
     }
