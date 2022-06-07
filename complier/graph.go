@@ -2,6 +2,7 @@ package complier
 
 import (
 	"gscript/proto"
+	"os"
 	"path/filepath"
 )
 
@@ -65,7 +66,15 @@ func hasCircle(n *node) bool {
 }
 
 func (g *graph) insertPath(from, to string) *node {
-	from, to = abs(from), abs(to)
+	curDir := abs(".")
+	from = abs(from)
+	if err := os.Chdir(filepath.Dir(from)); err != nil {
+		panic(err)
+	}
+	to = abs(to)
+	if err := os.Chdir(curDir); err != nil {
+		panic(err)
+	}
 	n := g.nodes[from]
 	nn, ok := g.nodes[to]
 	if !ok {
