@@ -2,7 +2,6 @@ package complier
 
 import (
 	"gscript/proto"
-	"gscript/std"
 	"os"
 	"path/filepath"
 )
@@ -22,14 +21,12 @@ type node struct {
 }
 
 type graph struct {
-	nodes     map[string]*node
-	stdProtos []*proto.Proto
+	nodes map[string]*node
 }
 
 func newGraph() *graph {
 	return &graph{
-		nodes:     make(map[string]*node),
-		stdProtos: make([]*proto.Proto, len(std.StdLibs)),
+		nodes: make(map[string]*node),
 	}
 }
 
