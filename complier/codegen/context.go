@@ -162,7 +162,11 @@ func (ctx *Context) insJumpAbs(addr uint32) int {
 
 func (ctx *Context) insLoadConst(c interface{}) {
 	idx := ctx.ct.Get(c)
-	ctx.writeIns(proto.INS_LOAD_CONST)
+	if stdLibGenMode {
+		ctx.writeIns(proto.INS_LOAD_STD_CONST)
+	} else {
+		ctx.writeIns(proto.INS_LOAD_CONST)
+	}
 	ctx.writeUint(ctx.protoNum)
 	ctx.writeUint(idx)
 }
@@ -172,13 +176,21 @@ func (ctx *Context) insLoadNil() {
 }
 
 func (ctx *Context) insLoadFunc(idx uint32) {
-	ctx.writeIns(proto.INS_LOAD_FUNC)
+	if stdLibGenMode {
+		ctx.writeIns(proto.INS_LOAD_STD_FUNC)
+	} else {
+		ctx.writeIns(proto.INS_LOAD_FUNC)
+	}
 	ctx.writeUint(ctx.protoNum)
 	ctx.writeUint(idx)
 }
 
 func (ctx *Context) insLoadAnonymous(idx uint32) {
-	ctx.writeIns(proto.INS_LOAD_ANONYMOUS)
+	if stdLibGenMode {
+		ctx.writeIns(proto.INS_LOAD_STD_ANONYMOUS)
+	} else {
+		ctx.writeIns(proto.INS_LOAD_ANONYMOUS)
+	}
 	ctx.writeUint(ctx.protoNum)
 	ctx.writeUint(idx)
 }
@@ -190,6 +202,11 @@ func (ctx *Context) insLoadUpValue(idx uint32) {
 
 func (ctx *Context) insLoadProto(idx uint32) {
 	ctx.writeIns(proto.INS_LOAD_PROTO)
+	ctx.writeUint(idx)
+}
+
+func (ctx *Context) insLoadStdlib(idx uint32) {
+	ctx.writeIns(proto.INS_LOAD_STDLIB)
 	ctx.writeUint(idx)
 }
 

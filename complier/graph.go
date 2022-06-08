@@ -2,6 +2,7 @@ package complier
 
 import (
 	"gscript/proto"
+	"gscript/std"
 	"os"
 	"path/filepath"
 )
@@ -21,12 +22,14 @@ type node struct {
 }
 
 type graph struct {
-	nodes map[string]*node
+	nodes     map[string]*node
+	stdProtos []*proto.Proto
 }
 
 func newGraph() *graph {
 	return &graph{
-		nodes: make(map[string]*node),
+		nodes:     make(map[string]*node),
+		stdProtos: make([]*proto.Proto, len(std.StdLibs)),
 	}
 }
 
@@ -36,6 +39,14 @@ func abs(path string) string {
 		panic("") // TODO
 	}
 	return path
+}
+
+func (g *graph) sortProtos() []proto.Proto {
+	protos := make([]proto.Proto, len(g.nodes))
+	for _, node := range g.nodes {
+		protos[node.protoNum] = *node.proto
+	}
+	return protos
 }
 
 func (g *graph) hasCircle() bool {
@@ -65,16 +76,21 @@ func hasCircle(n *node) bool {
 	return false
 }
 
-func (g *graph) insertPath(from, to string) *node {
+func getImportPath(base string, _import string) string {
 	curDir := abs(".")
-	from = abs(from)
-	if err := os.Chdir(filepath.Dir(from)); err != nil {
+	if err := os.Chdir(filepath.Dir(base)); err != nil {
 		panic(err)
 	}
-	to = abs(to)
+	res := abs(_import)
 	if err := os.Chdir(curDir); err != nil {
 		panic(err)
 	}
+	return res
+}
+
+func (g *graph) insertPath(from, to string) *node {
+	from = abs(from)
+	to = getImportPath(from, to)
 	n := g.nodes[from]
 	nn, ok := g.nodes[to]
 	if !ok {

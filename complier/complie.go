@@ -6,6 +6,7 @@ import (
 	"gscript/complier/lexer"
 	"gscript/complier/parser"
 	"gscript/proto"
+	"gscript/std"
 	"io/ioutil"
 	"os"
 	"path"
@@ -24,7 +25,7 @@ func readCode(path string) ([]byte, error) {
 	return ioutil.ReadFile(path)
 }
 
-func ComplieWithSrcFile(path string) (_proto []proto.Proto, err error) {
+func ComplieWithSrcFile(path string) (protos []proto.Proto, err error) {
 	code, err := readCode(path)
 	if err != nil {
 		return
@@ -32,20 +33,16 @@ func ComplieWithSrcFile(path string) (_proto []proto.Proto, err error) {
 	return ComplieWithSrcCode(code, path)
 }
 
-func ComplieWithSrcCode(code []byte, filename string) ([]proto.Proto, error) {
+func ComplieWithSrcCode(code []byte, filename string) (protos []proto.Proto, err error) {
 	graph := newGraph()
 	n := graph.insert(filename)
-	if err := complie(code, n, graph); err != nil {
-		return nil, err
+	if err = complie(code, n, graph); err != nil {
+		return
 	}
 	if graph.hasCircle() {
 		return nil, fmt.Errorf("import circle occurs")
 	}
-	protos := make([]proto.Proto, len(graph.nodes))
-	for _, node := range graph.nodes {
-		protos[node.protoNum] = *node.proto
-	}
-	return protos, nil
+	return graph.sortProtos(), nil
 }
 
 func complie(code []byte, n *node, graph *graph) error {
@@ -56,19 +53,26 @@ func complie(code []byte, n *node, graph *graph) error {
 	var nodes []*node
 	for _, _import := range prog.Imports {
 		for _, lib := range _import.Libs {
+			var protoNumber uint32
 			if lib.Stdlib {
-				continue // TODO
+				var ok bool
+				protoNumber, ok = std.StdLibs[lib.Path]
+				if !ok {
+					return fmt.Errorf("invalid std libarary: %s", lib.Path)
+				}
+			} else {
+				nn := graph.insertPath(n.pathname, lib.Path+".gs")
+				nodes = append(nodes, nn)
+				protoNumber = nn.protoNum
 			}
-			filepath := lib.Path + ".gs"
-			nn := graph.insertPath(n.pathname, filepath)
 			alias := lib.Alias
 			if alias == "" {
 				alias = path.Base(lib.Path)
 			}
-			nodes = append(nodes, nn)
 			imports = append(imports, codegen.Import{
-				ProtoNumber: nn.protoNum,
+				ProtoNumber: protoNumber,
 				Alias:       alias,
+				StdLib:      lib.Stdlib,
 			})
 		}
 	}
@@ -89,7 +93,6 @@ func complie(code []byte, n *node, graph *graph) error {
 		if err := complie(code, n, graph); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }

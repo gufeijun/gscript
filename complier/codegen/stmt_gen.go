@@ -7,9 +7,16 @@ import (
 	"gscript/proto"
 )
 
+var stdLibGenMode bool
+
+func SetStdLibGenMode() {
+	stdLibGenMode = true
+}
+
 type Import struct {
 	ProtoNumber uint32
 	Alias       string
+	StdLib      bool
 }
 
 func Gen(parser *parser.Parser, prog *ast.Program, imports []Import, protoNum uint32) proto.Proto {
@@ -24,7 +31,7 @@ func Gen(parser *parser.Parser, prog *ast.Program, imports []Import, protoNum ui
 
 	genImports(imports, ctx)
 	genBlockStmts(prog.BlockStmts, ctx)
-	if !mainProto {
+	if !mainProto || stdLibGenMode {
 		genExport(prog.Export, ctx)
 	} else {
 		ctx.writeIns(proto.INS_STOP)
@@ -49,7 +56,11 @@ func genExport(export ast.Export, ctx *Context) {
 
 func genImports(imports []Import, ctx *Context) {
 	for _, _import := range imports {
-		ctx.insLoadProto(_import.ProtoNumber)
+		if _import.StdLib {
+			ctx.insLoadStdlib(_import.ProtoNumber)
+		} else {
+			ctx.insLoadProto(_import.ProtoNumber)
+		}
 		ctx.insPushName(_import.Alias)
 	}
 }
