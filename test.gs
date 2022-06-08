@@ -1,4 +1,4 @@
-import "fs"
+import fs;
 
 let filepath = "./text.txt"
 
