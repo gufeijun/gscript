@@ -82,6 +82,13 @@ func WriteProtos(w io.Writer, protos []Proto) error {
 	return err
 }
 
+func WriteProto(w io.Writer, proto *Proto) error {
+	var buff bytes.Buffer
+	writeProto(&buff, proto)
+	_, err := io.Copy(w, &buff)
+	return err
+}
+
 func writeProto(w *bytes.Buffer, proto *Proto) {
 	writeString(w, proto.FilePath)
 	// for i, cons := range proto.Consts {
@@ -410,7 +417,7 @@ func ReadProtos(r io.Reader) (h Header, protos []Proto, err error) {
 	return
 }
 
-func readProto(r *bufio.Reader) (p Proto, err error) {
+func ReadProto(r *bufio.Reader) (p Proto, err error) {
 	p.FilePath, err = readString(r)
 	if err != nil {
 		return
@@ -438,7 +445,7 @@ func readProtos(r *bufio.Reader) (protos []Proto, err error) {
 	}
 	protos = make([]Proto, 0, protoCnt)
 	for i := 0; i < int(protoCnt); i++ {
-		proto, err := readProto(r)
+		proto, err := ReadProto(r)
 		if err != nil {
 			return nil, err
 		}
