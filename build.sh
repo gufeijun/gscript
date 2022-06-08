@@ -1,5 +1,11 @@
 #/bin/bash
 
+version=$(go version | awk '{print $3}' | awk '{split($0,b,".");print b[2]}')
+if [ $version -lt 16 ]; then
+    echo "[failed] go version should be greater than or equal to 1.16"
+    exit
+fi
+
 cd $(dirname $0)
 
 files=$(ls std/*.gsproto 2> /dev/null | wc -l)
