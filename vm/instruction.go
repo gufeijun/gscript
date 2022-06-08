@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"gscript/proto"
 	"gscript/vm/types"
 	"strconv"
 )
@@ -32,12 +33,16 @@ var actions = []func(vm *VM){
 	actionBinaryATTR,
 	actionLoadNil,
 	actionLoadConst,
+	actionLoadStdConst,
 	actionLoadName,
 	actionLoadFunc,
+	actionLoadStdFunc,
 	actionLoadBuiltin,
 	actionLoadAnonymous,
+	actionLoadStdAnonymous,
 	actionLoadUpValue,
 	actionLoadProto,
+	actionLoadStdlib,
 	actionStoreName,
 	actionStoreUpValue,
 	actionStoreKV,
@@ -228,12 +233,35 @@ func actionLoadConst(vm *VM) {
 	vm.curProto.stack.Push(vm.protos[vm.getOpNum()].Consts[vm.getOpNum()])
 }
 
+func actionLoadStdConst(vm *VM) {
+	libIdx := vm.getOpNum()
+	constIdx := vm.getOpNum()
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(libIdx, constIdx)
+			fmt.Println(vm.curProto.filepath)
+			panic("good")
+		}
+	}()
+	vm.curProto.stack.Push(vm.stdlibs[libIdx].Consts[constIdx])
+	// vm.curProto.stack.Push(vm.stdlibs[vm.getOpNum()].Consts[vm.getOpNum()])
+}
+
 func actionLoadName(vm *VM) {
 	vm.curProto.stack.Push(vm.curProto.frame.symbolTable.getValue(vm.getOpNum()))
 }
 
 func actionLoadFunc(vm *VM) {
 	f := &vm.protos[vm.getOpNum()].Funcs[vm.getOpNum()]
+	genClosure(vm, f)
+}
+
+func actionLoadStdFunc(vm *VM) {
+	f := &vm.stdlibs[vm.getOpNum()].Funcs[vm.getOpNum()]
+	genClosure(vm, f)
+}
+
+func genClosure(vm *VM, f *proto.FuncProto) {
 	if f.UpValueTable == nil {
 		table := make([]*types.GsValue, 0, len(f.UpValues))
 		for _, nameIdx := range f.UpValues {
@@ -256,6 +284,15 @@ func actionLoadBuiltin(vm *VM) {
 
 func actionLoadAnonymous(vm *VM) {
 	f := &vm.protos[vm.getOpNum()].AnonymousFuncs[vm.getOpNum()]
+	genClosureForAnonymousFunc(vm, f)
+}
+
+func actionLoadStdAnonymous(vm *VM) {
+	f := &vm.stdlibs[vm.getOpNum()].AnonymousFuncs[vm.getOpNum()]
+	genClosureForAnonymousFunc(vm, f)
+}
+
+func genClosureForAnonymousFunc(vm *VM, f *proto.AnonymousFuncProto) {
 	closure := &types.Closure{
 		Info:     f.Info,
 		UpValues: make([]*types.GsValue, 0, len(f.UpValues)),
@@ -279,6 +316,13 @@ func actionLoadUpValue(vm *VM) {
 func actionLoadProto(vm *VM) {
 	num := vm.getOpNum()
 	frame := newProtoFrame(vm.protos[num])
+	frame.prev = vm.curProto
+	vm.curProto = frame
+}
+
+func actionLoadStdlib(vm *VM) {
+	num := vm.getOpNum()
+	frame := newProtoFrame(vm.stdlibs[num])
 	frame.prev = vm.curProto
 	vm.curProto = frame
 }

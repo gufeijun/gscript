@@ -9,13 +9,15 @@ import (
 type VM struct {
 	stopped           bool
 	protos            []proto.Proto
+	stdlibs           []proto.Proto
 	curProto          *protoFrame
 	builtinFuncFailed bool
 }
 
-func NewVM(protos []proto.Proto) *VM {
+func NewVM(protos []proto.Proto, stdlibs []proto.Proto) *VM {
 	return &VM{
 		protos:   protos,
+		stdlibs:  stdlibs,
 		curProto: newProtoFrame(protos[0]),
 	}
 }

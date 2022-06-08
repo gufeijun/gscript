@@ -288,6 +288,13 @@ func showInstruction(vm *VM, text []byte, pc uint32) uint32 {
 		constNum := getOpNum(text, pc)
 		fmt.Printf("LOAD_CONST %v", vm.protos[protoNum].Consts[constNum])
 		skip += 8
+	case proto.INS_LOAD_STD_CONST:
+		pc++
+		protoNum := getOpNum(text, pc)
+		pc += 4
+		constNum := getOpNum(text, pc)
+		fmt.Printf("LOAD_STD_CONST %v", vm.stdlibs[protoNum].Consts[constNum])
+		skip += 8
 	case proto.INS_LOAD_NAME:
 		pc++
 		fmt.Printf("LOAD_NAME %d", getOpNum(text, pc))
@@ -298,11 +305,23 @@ func showInstruction(vm *VM, text []byte, pc uint32) uint32 {
 		pc += 4
 		fmt.Printf("LOAD_FUNC %d %d", protoNum, getOpNum(text, pc))
 		skip += 8
+	case proto.INS_LOAD_STD_FUNC:
+		pc++
+		protoNum := getOpNum(text, pc)
+		pc += 4
+		fmt.Printf("LOAD_STD_FUNC %d %d", protoNum, getOpNum(text, pc))
+		skip += 8
 	case proto.INS_LOAD_ANONYMOUS:
 		pc++
 		protoNum := getOpNum(text, pc)
 		pc += 4
 		fmt.Printf("LOAD_ANONYMOUS %d %d", protoNum, getOpNum(text, pc))
+		skip += 8
+	case proto.INS_LOAD_STD_ANONYMOUS:
+		pc++
+		protoNum := getOpNum(text, pc)
+		pc += 4
+		fmt.Printf("LOAD_STD_ANONYMOUS %d %d", protoNum, getOpNum(text, pc))
 		skip += 8
 	case proto.INS_LOAD_UPVALUE:
 		pc++
@@ -311,6 +330,10 @@ func showInstruction(vm *VM, text []byte, pc uint32) uint32 {
 	case proto.INS_LOAD_PROTO:
 		pc++
 		fmt.Printf("LOAD_PROTO %d", getOpNum(text, pc))
+		skip += 4
+	case proto.INS_LOAD_STDLIB:
+		pc++
+		fmt.Printf("LOAD_STDLIB %d", getOpNum(text, pc))
 		skip += 4
 	case proto.INS_STORE_NAME:
 		pc++

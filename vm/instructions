@@ -1,0 +1,225 @@
+基于栈的寄存器
+
+01. POP_TOP
+    弹出栈顶的元素
+
+02. ROT_TWO
+    将栈顶两个元素交换
+
+04. UNARY_NOT
+    将栈顶的取反
+
+04. UNARY_NEG
+    将栈顶的取负
+
+04. UNARY_LNOT
+    将栈顶的变为bool反
+
+04. BINOP_ADD
+    将栈顶两个元素相加
+
+04. BINOP_SUB
+    相减
+
+04. BINOP_MUL
+    相乘
+
+04. BINOP_DIV
+    相除
+
+04. BINOP_IDIV
+    整数相除
+
+04. BINOP_MOD
+    求余
+
+04. BINOP_ATTR
+    求属性
+
+05. BINOP_SHL
+    左移
+
+05. BINOP_SHR
+    右移
+    
+05. BINOP_AND
+    &
+
+05. BINOP_OR
+    |
+
+05. BINOP_XOR
+    ^
+
+05. BINOP_LE
+    <=
+
+06. BINOP_GE
+    >=
+
+07. BINOP_LT
+    <
+
+08. BINOP_GT
+    >
+
+09. BINOP_EQ
+    ==
+
+10. BINOP_NE
+    !=
+
+11. BINOP_LAND
+    &&
+
+12. BINOP_LOR
+    ||
+
+06. SLICE_SUB
+    三个操作数，栈底到栈顶分别是arr，i1，i2，将三者弹出，并将arr[i1:i2]放入栈顶
+
+09. ENTER_LOOP
+    记录当前loop的开始和结束位置，方便后面的break和continue
+
+09. BREAK
+
+10. CONTINUE
+
+11. RETURN
+    返回参数，栈顶是参数个数，接着栈里就存取这些参数
+
+12. IMPORT
+    栈顶指定模块位置，执行模块，然后将EXPORT的数据压入栈顶
+
+13. POP_BLOCK
+    将BLOCK从栈中pop出
+
+15. NEW_EMPTY_MAP
+    将空map放入栈顶
+
+14. NEW_MAP
+    在求值栈上有n个键值对，指令后面4B就是n，将生成的map放在求值栈上
+
+14. SLICE_NEW
+    在求值栈上有n个值，指令后面4B就是n，将生成的arr放在求值栈上
+
+08. SLICE_APPEND
+    两个操作数，分别是arr和v，arr = append(arr,v)，弹出一个
+
+15. ATTR_ASSIGN
+    栈底到栈顶分别是value,idx,map(或者slice), map[idx]=value，弹出三个
+
+15. ATTR_ASSIGN_ADDEQ
+
+15. ATTR_ASSIGN_SUBEQ
+
+15. ATTR_ASSIGN_MULEQ
+
+15. ATTR_ASSIGN_DIVEQ
+
+15. ATTR_ASIGN_MODEQ
+
+16. ATTR_ASIGN_ANDEQ
+
+17. ATTR_ASIGN_XOREQ
+
+18. ATTR_ASIGN_OREQ
+
+15. ATTR_ACCESS 栈底到栈顶分别为idx,map(或者slice)， 将value压入求值栈，弹出两个
+
+17. LOAD_NIL
+
+16. LOAD_CONST
+    指令后4B跟proto偏移，4B跟const偏移，将对应的const放入栈顶
+
+16. LOAD_STD_CONST
+    指令后4B跟STDproto偏移，4B跟const偏移，将对应的const放入栈顶
+
+17. LOAD_NAME
+    指令后4B跟name偏移，将对应的name符号对应的值放入栈顶
+
+17. LOAD_FUNC
+    指令后4B跟proto偏移，4B跟func偏移，完成闭包，将对应的closure放入栈顶
+
+17. LOAD_STD_FUNC
+    指令后4B跟STDproto偏移，4B跟func偏移，完成闭包，将对应的closure放入栈顶
+
+17. LOAD_BUILTIN
+    指令后4B跟表偏移，将对应的builtIn结构体放入栈顶
+
+17. LOAD_ANONYMOUS
+    指令后4B跟proto偏移，4B跟anonymous表偏移，完成闭包，将对应的closure放入栈顶
+
+17. LOAD_STD_ANONYMOUS
+    指令后4B跟proto偏移，4B跟anonymous表偏移，完成闭包，将对应的closure放入栈顶
+
+17. LOAD_UPVALUE
+    指令后4B跟UPVALUE偏移
+
+17. LOAD_PROTO
+    指令后4B跟proto偏移
+
+18. LOAD_STDLIB
+    指令后4B跟proto便宜
+
+18. STORE_NAME
+    指令后4B跟name偏移, 栈顶是值，将值写入NAME表，弹出值
+
+19. STORE_UPVALUE
+    指令后4B跟upValue偏移, 栈顶是值，将值写入upvalue表，弹出值
+
+20. STORE_KV
+    栈底到栈顶分别是k和v，map在符号表最顶部
+
+18. PUSH_NIL
+    在符号表中push一个nil
+
+18. PUSH_NAME
+    栈顶是value，在符号表中建立一个符号并赋值为value，将value pop出
+
+19. COPY_NAME
+    和PUSH_NAME类似，但不将value pop出
+
+19. RESIZE_NAMETABLE
+    指令后4B跟长度
+
+17. JUMP_REL
+    后面跟4B，跳转到当前位置+k的位置
+
+18. JUMP_ABS
+    后面跟4B，跳转到绝对位置addr 
+
+20. JUMP_IF
+    栈顶是条件，后面4B跟绝对地址,弹出条件
+
+21. JUMP_LAND
+    栈顶是条件，后面4B跟相对地址。
+    如果条件为false，则jump到相对地址，且不要弹出条件。
+    如果条件为true，则弹出条件，并让指令顺序执行(生成第二个Exp)
+
+22. JUMP_LOR
+    栈顶是条件，后面4B跟相对地址
+    如果条件为true，则jump到相对地址(跳过第二个EXP的生成),且不要弹出条件
+    如果条件为false，则弹出条件，并让指令顺序执行
+
+20. JUMP_CASE
+    栈底到栈顶分别是switch的condition和case的condition，指令后4B跟地址，只弹出case的condition
+
+19. CALL
+    栈底到栈顶分别是：从左至右的参数，栈顶是Func结构体
+    Call后1B是想要的返回值个数，再后1B是参数个数
+
+20. RETURN
+    从左至右压入返回值
+    RETURN后4B是返回参数个数
+
+20. EXPORT
+    将栈顶的数据返回
+
+20. TRY
+    后面跟4B的catch代码跳转地址。vm负责保存
+
+20. END_TRY
+    
+
+new object的步骤：编译时就插入下面：生成一个{}压入栈顶，生成参数压入栈顶，最后压入参数个数+1，然后__self地址,最后Call指令
