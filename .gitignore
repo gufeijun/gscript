@@ -1,2 +1,5 @@
 TODO
+bin
+tmp
+*.gsproto
 # *.gs
