@@ -8,12 +8,13 @@ import (
 	"gscript/complier/ast"
 	"io"
 	"math"
+	"os"
 )
 
 const (
 	magicNumber       = 0x00686a6c
-	versionMajor byte = 0
-	versionMinor byte = 1
+	VersionMajor byte = 0
+	VersionMinor byte = 1
 )
 
 const (
@@ -65,8 +66,8 @@ func readHeader(r *bufio.Reader) (h Header, err error) {
 }
 
 func writeVersion(buff *bytes.Buffer) {
-	buff.WriteByte(versionMajor)
-	buff.WriteByte(versionMinor)
+	buff.WriteByte(VersionMajor)
+	buff.WriteByte(VersionMinor)
 }
 
 func WriteProtos(w io.Writer, protos []Proto) error {
@@ -452,4 +453,43 @@ func readProtos(r *bufio.Reader) (protos []Proto, err error) {
 		protos = append(protos, proto)
 	}
 	return
+}
+
+func WriteProtosToFile(src string, protos []Proto) error {
+	file, err := os.OpenFile(src, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0664)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return WriteProtos(file, protos)
+}
+
+func IsProtoFile(path string) bool {
+	file, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	stat, err := file.Stat()
+	if err != nil {
+		return false
+	}
+	if stat.Size() < 4 {
+		return false
+	}
+	buf := make([]byte, 4)
+	if _, err := io.ReadFull(file, buf); err != nil {
+		return false
+	}
+	magic := binary.LittleEndian.Uint32(buf)
+	return magic == magicNumber
+}
+
+func ReadProtosFromFile(src string) (Header, []Proto, error) {
+	file, err := os.Open(src)
+	if err != nil {
+		return Header{}, nil, err
+	}
+	defer file.Close()
+	return ReadProtos(file)
 }
