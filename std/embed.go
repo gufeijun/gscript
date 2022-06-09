@@ -10,7 +10,7 @@ import (
 //go:embed *.gsproto
 var ProtoFiles embed.FS
 
-const protoSuffix string = ".gsproto"
+const ProtoSuffix string = ".gsproto"
 
 var StdLibs = map[string]uint32{
 	"Buffer": 0,
@@ -19,7 +19,7 @@ var StdLibs = map[string]uint32{
 }
 
 func ReadProto(lib string) (proto.Proto, error) {
-	file, err := ProtoFiles.Open(lib + protoSuffix)
+	file, err := ProtoFiles.Open(lib + ProtoSuffix)
 	if err != nil {
 		return proto.Proto{}, fmt.Errorf("can not find std libarary bytes code: %v", err)
 	}
