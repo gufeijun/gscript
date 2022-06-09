@@ -181,6 +181,7 @@ func genFuncDefStmt(stmt *ast.FuncDefStmt, ctx *Context) {
 	funcIdx := ctx.ft.funcMap[stmt.Name]
 
 	genFuncLiteral(&stmt.FuncLiteral, ctx, funcIdx, false)
+	ctx.ft.funcTable[funcIdx].Name = stmt.Name
 }
 
 func collectArgs(literal *ast.FuncLiteral, ctx *Context) {
