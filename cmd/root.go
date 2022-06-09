@@ -30,7 +30,7 @@ var versionCmd = &cobra.Command{
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(Version)
+		fmt.Printf("%d.%d\n", proto.VersionMajor, proto.VersionMinor)
 	},
 }
 
@@ -73,15 +73,44 @@ var buildCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// TODO handle Flag_Asm
 		src := args[0]
-		if Flag_Output == "" {
-			Flag_Output = strings.TrimSuffix(src, path.Ext(path.Base(src))) + std.ProtoSuffix
+		// just complie source file to bytes code
+		if !Flag_Asm {
+			return complieToBytesCode(src)
 		}
-		protos, err := complier.ComplieWithSrcFile(src)
-		if err != nil {
-			return err
-		}
-		return proto.WriteProtosToFile(Flag_Output, protos)
+		// generate human-readable assemble code
+		return complieToReadableAsm(src)
 	},
+}
+
+func complieToReadableAsm(src string) (err error) {
+	if Flag_Output == "" {
+		Flag_Output = replaceExtension(src, ".gsasm")
+	}
+	var protos []proto.Proto
+	if proto.IsProtoFile(src) {
+		_, protos, err = proto.ReadProtosFromFile(src)
+	} else {
+		protos, err = complier.ComplieWithSrcFile(src)
+	}
+	if err != nil {
+		return err
+	}
+	return WriteHumanReadableAsmToFile(Flag_Output, protos)
+}
+
+func complieToBytesCode(src string) error {
+	if Flag_Output == "" {
+		Flag_Output = replaceExtension(src, std.ProtoSuffix)
+	}
+	protos, err := complier.ComplieWithSrcFile(src)
+	if err != nil {
+		return err
+	}
+	return proto.WriteProtosToFile(Flag_Output, protos)
+}
+
+func replaceExtension(src string, extension string) string {
+	return strings.TrimSuffix(src, path.Ext(path.Base(src))) + extension
 }
 
 func initVM(src string) (*vm.VM, error) {
@@ -104,11 +133,13 @@ func initVM(src string) (*vm.VM, error) {
 	return v, nil
 }
 
-func Execute() {
+func init() {
 	buildCmd.Flags().StringVarP(&Flag_Output, "output", "o", "", "output file")
 	buildCmd.Flags().BoolVarP(&Flag_Asm, "asm", "a", false, "output human-readable assembly code")
 	rootCmd.AddCommand(runCmd, versionCmd, debugCmd, buildCmd)
+}
 
+func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
