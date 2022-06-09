@@ -12,10 +12,24 @@ var ProtoFiles embed.FS
 
 const ProtoSuffix string = ".gsproto"
 
-var StdLibs = map[string]uint32{
+var StdLibMap = map[string]uint32{
 	"Buffer": 0,
 	"fs":     1,
 	"os":     2,
+}
+
+var stdLibs = []string{"Buffer", "fs", "os"}
+
+func GetLibNameByProtoNum(num uint32) string {
+	return stdLibs[num]
+}
+
+func GetLibProtoNumByName(name string) (uint32, error) {
+	num, ok := StdLibMap[name]
+	if !ok {
+		return 0, fmt.Errorf("invalid std libarary: %s", name)
+	}
+	return num, nil
 }
 
 func ReadProto(lib string) (proto.Proto, error) {
@@ -28,8 +42,8 @@ func ReadProto(lib string) (proto.Proto, error) {
 }
 
 func ReadProtos() ([]proto.Proto, error) {
-	protos := make([]proto.Proto, len(StdLibs))
-	for lib, num := range StdLibs {
+	protos := make([]proto.Proto, len(StdLibMap))
+	for lib, num := range StdLibMap {
 		p, err := ReadProto(lib)
 		if err != nil {
 			return nil, err

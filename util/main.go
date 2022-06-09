@@ -18,7 +18,7 @@ func main() {
 		fmt.Printf("Usage: %s <dir>\n", os.Args[0])
 		return
 	}
-	for lib := range std.StdLibs {
+	for lib := range std.StdLibMap {
 		err := complieStdLib(lib)
 		if err != nil {
 			fmt.Printf("complie std libarary failed, error message: %v\n", err)
@@ -29,7 +29,7 @@ func main() {
 
 func complieStdLib(stdlib string) error {
 	source, target := path.Join(os.Args[1], stdlib+".gs"), path.Join(os.Args[1], stdlib+".gsproto")
-	protoNum := std.StdLibs[stdlib]
+	protoNum := std.StdLibMap[stdlib]
 
 	code, err := ioutil.ReadFile(source)
 	if err != nil {
@@ -40,7 +40,7 @@ func complieStdLib(stdlib string) error {
 	var imports []codegen.Import
 	for _, _import := range prog.Imports {
 		for _, lib := range _import.Libs {
-			num, ok := std.StdLibs[lib.Path]
+			num, ok := std.StdLibMap[lib.Path]
 			if !ok {
 				return fmt.Errorf("invalid std libarary: %s", lib.Path)
 			}
