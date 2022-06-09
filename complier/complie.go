@@ -55,10 +55,10 @@ func complie(code []byte, n *node, graph *graph) error {
 		for _, lib := range _import.Libs {
 			var protoNumber uint32
 			if lib.Stdlib {
-				var ok bool
-				protoNumber, ok = std.StdLibs[lib.Path]
-				if !ok {
-					return fmt.Errorf("invalid std libarary: %s", lib.Path)
+				var err error
+				protoNumber, err = std.GetLibProtoNumByName(lib.Path)
+				if err != nil {
+					return err
 				}
 			} else {
 				nn := graph.insertPath(n.pathname, lib.Path+".gs")
