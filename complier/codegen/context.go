@@ -72,7 +72,7 @@ func (ctx *Context) writeByte(v byte) {
 }
 
 func (ctx *Context) insCopyName(name string) {
-	ctx.writeIns(proto.INS_COPY_NAME)
+	ctx.writeIns(proto.INS_COPY_STACK_TOP)
 	ctx.frame.nt.Set(name)
 }
 
