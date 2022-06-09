@@ -15,6 +15,10 @@ type builtinFunc struct {
 	name    string
 }
 
+func GetBuiltinFuncNameByNum(num uint32) string {
+	return builtinFuncs[num].name
+}
+
 // if modify the following, should modify builtinFuncs in context.go too
 var builtinFuncs = []builtinFunc{
 	{builtinPrint, "print"},

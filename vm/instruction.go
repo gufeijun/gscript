@@ -32,6 +32,26 @@ var actions = []func(vm *VM){
 	actionBinaryLOR,
 	actionBinaryATTR,
 	actionLoadNil,
+	actionStoreKV,
+	actionPushNameNil,
+	actionPushName,
+	actionCopyStackTop,
+	actionPopTop,
+	actionStop,
+	actionAttrAssign,
+	actionAttrAssignAddEq,
+	actionAttrAssignSubEq,
+	actionAttrAssignMulEq,
+	actionAttrAssignDivEq,
+	actionAttrAssignModEq,
+	actionAttrAssignAndEq,
+	actionAttrAssignXorEq,
+	actionAttrAssignOrEq,
+	actionAttrAccess,
+	actionRotTwo,
+	actionExport,
+	actionEndTry,
+	actionNewEmptyMap,
 	actionLoadConst,
 	actionLoadStdConst,
 	actionLoadName,
@@ -45,26 +65,9 @@ var actions = []func(vm *VM){
 	actionLoadStdlib,
 	actionStoreName,
 	actionStoreUpValue,
-	actionStoreKV,
-	actionPushNameNil,
-	actionPushName,
-	actionCopyName,
 	actionResizeNameTable,
-	actionPopTop,
-	actionStop,
 	actionSliceNew,
 	actionNewMap,
-	actionNewEmptyMap,
-	actionAttrAssign,
-	actionAttrAssignAddEq,
-	actionAttrAssignSubEq,
-	actionAttrAssignMulEq,
-	actionAttrAssignDivEq,
-	actionAttrAssignModEq,
-	actionAttrAssignAndEq,
-	actionAttrAssignXorEq,
-	actionAttrAssignOrEq,
-	actionAttrAccess,
 	actionJumpRel,
 	actionJumpAbs,
 	actionJumpIf,
@@ -73,10 +76,7 @@ var actions = []func(vm *VM){
 	actionJumpCase,
 	actionCall,
 	actionReturn,
-	actionRotTwo,
-	actionExport,
 	actionTry,
-	actionEndTry,
 }
 
 func actionUnaryNOT(vm *VM) {
@@ -358,7 +358,7 @@ func actionPushName(vm *VM) {
 	vm.curProto.stack.Pop()
 }
 
-func actionCopyName(vm *VM) {
+func actionCopyStackTop(vm *VM) {
 	vm.curProto.frame.symbolTable.pushSymbol(vm.curProto.stack.Top())
 }
 

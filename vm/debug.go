@@ -364,7 +364,7 @@ func showInstruction(vm *VM, text []byte, pc uint32) uint32 {
 		skip += 4
 	case proto.INS_PUSH_NAME:
 		fmt.Printf("PUSH_NAME")
-	case proto.INS_COPY_NAME:
+	case proto.INS_COPY_STACK_TOP:
 		fmt.Printf("COPY_NAME")
 	case proto.INS_RESIZE_NAMETABLE:
 		pc++
