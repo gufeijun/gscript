@@ -1,10 +1,10 @@
 package ast
 
-import . "gscript/complier/lexer"
+import "gscript/complier/token"
 
 // do not change the order of following const
 const (
-	ASIGN_OP_START  = TOKEN_ASIGN_START + iota
+	ASIGN_OP_START  = token.TOKEN_ASIGN_START + iota
 	ASIGN_OP_ASSIGN // =
 	ASIGN_OP_ADDEQ  // +=
 	ASIGN_OP_SUBEQ  // -=
@@ -17,7 +17,7 @@ const (
 )
 
 const (
-	BINOP_START = TOKEN_BINOP_START + iota
+	BINOP_START = token.TOKEN_BINOP_START + iota
 	BINOP_ADD   // +
 	BINOP_SUB   // -
 	BINOP_MUL   // *

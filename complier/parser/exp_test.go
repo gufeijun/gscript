@@ -2,13 +2,13 @@ package parser
 
 import (
 	. "gscript/complier/ast"
-	. "gscript/complier/lexer"
+	"gscript/complier/lexer"
 	"reflect"
 	"testing"
 )
 
-func newLexer(src string) *Lexer {
-	return NewLexer("", []byte(src))
+func newLexer(src string) *lexer.Lexer {
+	return lexer.NewLexer("", []byte(src))
 }
 
 func TestParseTerm12(t *testing.T) {
