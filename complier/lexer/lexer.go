@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	"gscript/complier/token"
 	"os"
 	"strconv"
 	"strings"
@@ -16,13 +17,13 @@ const (
 )
 
 type Lexer struct {
-	line       int    // current line number
-	kth        int    // index of current charactor in current line
-	src        []byte // source code
-	cursor     int    // number of next character needs to be parse
-	srcFile    string // source file path
-	curToken   *Token
-	aheadToken *Token // save LookAhead token temporarily
+	line       int          // current line number
+	kth        int          // index of current charactor in current line
+	cursor     int          // number of next character needs to be parse
+	src        []byte       // source code
+	srcFile    string       // source file path
+	curToken   *token.Token // current token
+	aheadToken *token.Token // save LookAhead token temporarily
 }
 
 func NewLexer(srcFile string, src []byte) *Lexer {
@@ -32,22 +33,6 @@ func NewLexer(srcFile string, src []byte) *Lexer {
 		cursor:  0,
 		srcFile: srcFile,
 	}
-}
-
-func (l *Lexer) NextTokenKind(kind int) *Token {
-	token := l.NextToken()
-	if token.Kind != kind {
-		panic(l.Line())
-	}
-	return token
-}
-
-func (l *Lexer) ConsumeIf(kind int) bool {
-	if l.Expect(kind) {
-		l.NextToken()
-		return true
-	}
-	return false
 }
 
 func (l *Lexer) Line() int {
@@ -62,12 +47,8 @@ func (l *Lexer) SrcFile() string {
 	return l.srcFile
 }
 
-func (l *Lexer) Expect(kind int) bool {
-	return l.LookAhead().Kind == kind
-}
-
 // Look ahead 1 token
-func (l *Lexer) LookAhead() (token *Token) {
+func (l *Lexer) LookAhead() (token *token.Token) {
 	if l.aheadToken != nil {
 		return l.aheadToken
 	}
@@ -75,7 +56,7 @@ func (l *Lexer) LookAhead() (token *Token) {
 	return l.aheadToken
 }
 
-func (l *Lexer) NextToken() (token *Token) {
+func (l *Lexer) NextToken() (token *token.Token) {
 	// if LookAhead before
 	if l.aheadToken != nil {
 		token, l.aheadToken = l.aheadToken, nil
@@ -84,165 +65,165 @@ func (l *Lexer) NextToken() (token *Token) {
 	return l.nextToken()
 }
 
-func (l *Lexer) nextToken() (token *Token) {
+func (l *Lexer) nextToken() *token.Token {
 again:
 	if breakLine := l.skipWhiteSpace(); breakLine && l.needAddSemi() {
 		l.genSemiToken()
 		return l.curToken
 	}
 	if l.reachEndOfFile() {
-		return eofToken
+		return token.EOFToken
 	}
 	curCh := l.src[l.cursor]
 	switch curCh {
 	case '.':
 		nextCh, gapCh := l.lookAhead(1), l.lookAhead(2)
 		if nextCh == '.' && gapCh == '.' {
-			l.genToken(TOKEN_SEP_VARARG, 3)
+			l.genToken(token.TOKEN_SEP_VARARG, 3)
 			l.forward(2)
 			break
 		}
-		l.genToken(TOKEN_SEP_DOT, 1)
+		l.genToken(token.TOKEN_SEP_DOT, 1)
 	case '"', '\'':
 		l.scanStringLiteral()
 	case ':':
-		l.genToken(TOKEN_SEP_COLON, 1)
+		l.genToken(token.TOKEN_SEP_COLON, 1)
 	case ';':
-		l.genToken(TOKEN_SEP_SEMI, 1)
+		l.genToken(token.TOKEN_SEP_SEMI, 1)
 	case ',':
-		l.genToken(TOKEN_SEP_COMMA, 1)
+		l.genToken(token.TOKEN_SEP_COMMA, 1)
 	case '?':
-		l.genToken(TOKEN_SEP_QMARK, 1)
+		l.genToken(token.TOKEN_SEP_QMARK, 1)
 	case '[':
-		l.genToken(TOKEN_SEP_LBRACK, 1)
+		l.genToken(token.TOKEN_SEP_LBRACK, 1)
 	case ']':
-		l.genToken(TOKEN_SEP_RBRACK, 1)
+		l.genToken(token.TOKEN_SEP_RBRACK, 1)
 	case '(':
-		l.genToken(TOKEN_SEP_LPAREN, 1)
+		l.genToken(token.TOKEN_SEP_LPAREN, 1)
 	case ')':
-		l.genToken(TOKEN_SEP_RPAREN, 1)
+		l.genToken(token.TOKEN_SEP_RPAREN, 1)
 	case '{':
-		l.genToken(TOKEN_SEP_LCURLY, 1)
+		l.genToken(token.TOKEN_SEP_LCURLY, 1)
 	case '}':
-		l.genToken(TOKEN_SEP_RCURLY, 1)
+		l.genToken(token.TOKEN_SEP_RCURLY, 1)
 	case '+':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_ADDEQ, 2)
+			l.genToken(token.TOKEN_OP_ADDEQ, 2)
 			l.forward(1)
 		} else if nextCh == '+' {
-			l.genToken(TOKEN_OP_INC, 2)
+			l.genToken(token.TOKEN_OP_INC, 2)
 			l.forward(1)
 		} else {
-			l.genToken(TOKEN_OP_ADD, 1)
+			l.genToken(token.TOKEN_OP_ADD, 1)
 		}
 	case '-':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_SUBEQ, 2)
+			l.genToken(token.TOKEN_OP_SUBEQ, 2)
 			l.forward(1)
 		} else if nextCh == '-' {
-			l.genToken(TOKEN_OP_DEC, 2)
+			l.genToken(token.TOKEN_OP_DEC, 2)
 			l.forward(1)
 		} else {
-			l.genToken(TOKEN_OP_SUB, 1)
+			l.genToken(token.TOKEN_OP_SUB, 1)
 		}
 	case '*':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_MULEQ, 2)
+			l.genToken(token.TOKEN_OP_MULEQ, 2)
 			l.forward(1)
 			break
 		}
-		l.genToken(TOKEN_OP_MUL, 1)
+		l.genToken(token.TOKEN_OP_MUL, 1)
 	case '/':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_DIVEQ, 2)
+			l.genToken(token.TOKEN_OP_DIVEQ, 2)
 			l.forward(1)
 		} else if nextCh == '/' {
-			l.genToken(TOKEN_OP_IDIV, 2)
+			l.genToken(token.TOKEN_OP_IDIV, 2)
 			l.forward(1)
 		} else {
-			l.genToken(TOKEN_OP_DIV, 1)
+			l.genToken(token.TOKEN_OP_DIV, 1)
 		}
 	case '%':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_MODEQ, 2)
+			l.genToken(token.TOKEN_OP_MODEQ, 2)
 			l.forward(1)
 			break
 		}
-		l.genToken(TOKEN_OP_MOD, 1)
+		l.genToken(token.TOKEN_OP_MOD, 1)
 	case '&':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_ANDEQ, 2)
+			l.genToken(token.TOKEN_OP_ANDEQ, 2)
 			l.forward(1)
 		} else if nextCh == '&' {
-			l.genToken(TOKEN_OP_LAND, 2)
+			l.genToken(token.TOKEN_OP_LAND, 2)
 			l.forward(1)
 		} else {
-			l.genToken(TOKEN_OP_AND, 1)
+			l.genToken(token.TOKEN_OP_AND, 1)
 		}
 	case '|':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_OREQ, 2)
+			l.genToken(token.TOKEN_OP_OREQ, 2)
 			l.forward(1)
 		} else if nextCh == '|' {
-			l.genToken(TOKEN_OP_LOR, 2)
+			l.genToken(token.TOKEN_OP_LOR, 2)
 			l.forward(1)
 		} else {
-			l.genToken(TOKEN_OP_OR, 1)
+			l.genToken(token.TOKEN_OP_OR, 1)
 		}
 	case '^':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_XOREQ, 2)
+			l.genToken(token.TOKEN_OP_XOREQ, 2)
 			l.forward(1)
 			break
 		}
-		l.genToken(TOKEN_OP_XOR, 1)
+		l.genToken(token.TOKEN_OP_XOR, 1)
 	case '~':
-		l.genToken(TOKEN_OP_NOT, 1)
+		l.genToken(token.TOKEN_OP_NOT, 1)
 	case '=':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_EQ, 2)
+			l.genToken(token.TOKEN_OP_EQ, 2)
 			l.forward(1)
 			break
 		}
-		l.genToken(TOKEN_OP_ASSIGN, 1)
+		l.genToken(token.TOKEN_OP_ASSIGN, 1)
 	case '!':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_NE, 2)
+			l.genToken(token.TOKEN_OP_NE, 2)
 			l.forward(1)
 			break
 		}
-		l.genToken(TOKEN_OP_LNOT, 1)
+		l.genToken(token.TOKEN_OP_LNOT, 1)
 	case '<':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_LE, 2)
+			l.genToken(token.TOKEN_OP_LE, 2)
 			l.forward(1)
 		} else if nextCh == '<' {
-			l.genToken(TOKEN_OP_SHL, 2)
+			l.genToken(token.TOKEN_OP_SHL, 2)
 			l.forward(1)
 		} else {
-			l.genToken(TOKEN_OP_LT, 1)
+			l.genToken(token.TOKEN_OP_LT, 1)
 		}
 	case '>':
 		nextCh := l.lookAhead(1)
 		if nextCh == '=' {
-			l.genToken(TOKEN_OP_GE, 2)
+			l.genToken(token.TOKEN_OP_GE, 2)
 			l.forward(1)
 		} else if nextCh == '>' {
-			l.genToken(TOKEN_OP_SHR, 2)
+			l.genToken(token.TOKEN_OP_SHR, 2)
 			l.forward(1)
 		} else {
-			l.genToken(TOKEN_OP_GT, 1)
+			l.genToken(token.TOKEN_OP_GT, 1)
 		}
 	case '#': // comment
 		l.skipComment()
@@ -253,7 +234,7 @@ again:
 		} else if isLetter_(curCh) {
 			l.scanIdentifier()
 		} else {
-			l.error("unexpected symbol near %c", curCh)
+			l.error("unexpected symbol near '%c'", curCh)
 		}
 	}
 
@@ -266,10 +247,10 @@ func (l *Lexer) scanIdentifier() {
 	for ; k < len(l.src) && (isLetter_(l.src[k]) || isDigit(l.src[k])); k++ {
 	}
 
-	l.genToken(TOKEN_IDENTIFIER, k-l.cursor)
+	l.genToken(token.TOKEN_IDENTIFIER, k-l.cursor)
 	id := string(l.src[l.cursor:k])
 	l.curToken.Value = id
-	if kind, ok := keywords[id]; ok {
+	if kind, ok := token.Keywords[id]; ok {
 		l.curToken.Kind = kind
 	}
 	l.forward(k - l.cursor - 1)
@@ -295,7 +276,7 @@ func (l *Lexer) scanNumber() {
 			k += 1
 		} else if nextCh == 'x' { // hex
 			if gapCh := l.lookAhead(2); gapCh == CHAR_EOF || !isHexDigit(gapCh) {
-				l.error("invalid hex number near %c", firstDigit)
+				l.error("invalid hex number near '%c'", firstDigit)
 			}
 			base = 16
 			k += 2
@@ -318,7 +299,7 @@ func (l *Lexer) scanNumber() {
 	value = num
 end:
 	contentLength := k - l.cursor
-	l.genToken(TOKEN_NUMBER, contentLength)
+	l.genToken(token.TOKEN_NUMBER, contentLength)
 	l.curToken.Value = value
 	l.forward(contentLength - 1)
 }
@@ -341,8 +322,11 @@ func (l *Lexer) scanStringLiteral() {
 	start := l.cursor + 1 // skip first " or '
 	for {
 		ahead := l.lookAhead(k)
-		if ahead == CHAR_EOF || ahead == CHAR_CR || ahead == CHAR_LF || isQuoteAndUnmatched(ahead, curCh) {
-			l.error("mismatch %c", curCh)
+		if ahead == CHAR_EOF || ahead == CHAR_CR || ahead == CHAR_LF {
+			l.error("expect another quotation mark before end of file or newline")
+		}
+		if isQuoteAndUnmatched(ahead, curCh) {
+			l.error("expect another %c, but got %c", curCh, ahead)
 		}
 		if ahead == l.src[l.cursor] { //matched
 			break
@@ -353,12 +337,12 @@ func (l *Lexer) scanStringLiteral() {
 		}
 		gap := l.lookAhead(k + 1)
 		if gap == CHAR_EOF {
-			l.error("mismatch %c", curCh)
+			l.error("expect another quotation mark before end of file or newline")
 		}
 		// only support \n, \t, \', \", \\,
 		if gap != 'n' && gap != 't' && gap != '\'' && gap != '"' && gap != '\\' {
 			l.cursor += k
-			l.error("unknow escape \\%c", gap)
+			l.error("invalid escape character \\%c", gap)
 		}
 		escape = true
 		b.Write(l.src[start : l.cursor+k])
@@ -372,7 +356,7 @@ func (l *Lexer) scanStringLiteral() {
 		k += 2
 		start = l.cursor + k
 	}
-	l.genToken(TOKEN_STRING, k+1)
+	l.genToken(token.TOKEN_STRING, k+1)
 	if escape {
 		b.Write(l.src[start : l.cursor+k])
 		l.curToken.Value = b.String()
@@ -441,8 +425,9 @@ func (l *Lexer) lookAhead(k int) byte {
 
 func (l *Lexer) error(format string, args ...interface{}) {
 	errMsg := fmt.Sprintf(format, args...)
-	fmt.Printf("[%s:%d:%d] %s\n", l.srcFile, l.line, l.kth, errMsg)
-	os.Exit(-1)
+	fmt.Printf("Lexer error: [%s:%d:%d]\n", l.srcFile, l.line, l.kth+1)
+	fmt.Printf("\t%s\n", errMsg)
+	os.Exit(0)
 }
 
 // move cursor and kth @k steps
@@ -456,7 +441,7 @@ func (l *Lexer) reachEndOfFile() bool {
 }
 
 func (l *Lexer) genToken(kind, contentLength int) {
-	l.curToken = &Token{
+	l.curToken = &token.Token{
 		Kind:    kind,
 		Line:    l.line,
 		Kth:     l.kth,
@@ -488,21 +473,21 @@ func toNumber(digit byte) (result int64) {
 }
 
 var addSemiTokens = map[int]struct{}{
-	TOKEN_IDENTIFIER:     {},
-	TOKEN_NUMBER:         {},
-	TOKEN_STRING:         {},
-	TOKEN_KW_BREAK:       {},
-	TOKEN_KW_FALLTHROUGH: {},
-	TOKEN_KW_CONTINUE:    {},
-	TOKEN_KW_RETURN:      {},
-	TOKEN_OP_INC:         {},
-	TOKEN_OP_DEC:         {},
-	TOKEN_SEP_RBRACK:     {},
-	TOKEN_SEP_RCURLY:     {},
-	TOKEN_SEP_RPAREN:     {},
-	TOKEN_KW_NIL:         {},
-	TOKEN_KW_TRUE:        {},
-	TOKEN_KW_FALSE:       {},
+	token.TOKEN_IDENTIFIER:     {},
+	token.TOKEN_NUMBER:         {},
+	token.TOKEN_STRING:         {},
+	token.TOKEN_KW_BREAK:       {},
+	token.TOKEN_KW_FALLTHROUGH: {},
+	token.TOKEN_KW_CONTINUE:    {},
+	token.TOKEN_KW_RETURN:      {},
+	token.TOKEN_OP_INC:         {},
+	token.TOKEN_OP_DEC:         {},
+	token.TOKEN_SEP_RBRACK:     {},
+	token.TOKEN_SEP_RCURLY:     {},
+	token.TOKEN_SEP_RPAREN:     {},
+	token.TOKEN_KW_NIL:         {},
+	token.TOKEN_KW_TRUE:        {},
+	token.TOKEN_KW_FALSE:       {},
 }
 
 func needAddSemi(kind int) bool {
@@ -515,8 +500,8 @@ func (l *Lexer) needAddSemi() bool {
 }
 
 func (l *Lexer) genSemiToken() {
-	l.curToken = &Token{
-		Kind:    TOKEN_SEP_SEMI,
+	l.curToken = &token.Token{
+		Kind:    token.TOKEN_SEP_SEMI,
 		Line:    l.curToken.Line,
 		Kth:     l.curToken.Kth + len(l.curToken.Content),
 		Content: ";",
