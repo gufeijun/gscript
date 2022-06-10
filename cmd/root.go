@@ -71,7 +71,6 @@ var buildCmd = &cobra.Command{
 	Args:                  cobra.ExactArgs(1),
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO handle Flag_Asm
 		src := args[0]
 		// just complie source file to bytes code
 		if !Flag_Asm {
