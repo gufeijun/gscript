@@ -53,7 +53,7 @@ func (bs *blockStack) latestFor() *forBlock {
 		}
 		cur = cur.(*switchBlock).prev
 	}
-	panic("unmatched continue")
+	return nil
 }
 
 func (bs *blockStack) latestSwitch() *switchBlock {
@@ -64,12 +64,9 @@ func (bs *blockStack) latestSwitch() *switchBlock {
 		}
 		cur = cur.(*forBlock).prev
 	}
-	panic("unmatched fallthrough")
+	return nil
 }
 
 func (bs *blockStack) top() interface{} {
-	if bs.cur == nil {
-		panic("unmatched continue or break")
-	}
 	return bs.cur
 }

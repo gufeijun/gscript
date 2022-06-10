@@ -410,13 +410,19 @@ func (p *Parser) parseWhileStmt() (stmt *ast.WhileStmt) {
 
 func (p *Parser) parseFallthroughStmt() (stmt *ast.FallthroughStmt) {
 	p.l.NextToken()
-	return new(ast.FallthroughStmt)
+	stmt = new(ast.FallthroughStmt)
+	stmt.Line = p.l.Line()
+	return stmt
 }
 
-func (p *Parser) parseGotoStmt() (stmt *ast.GotoStmt) {
+func (p *Parser) parseGotoStmt() *ast.GotoStmt {
 	p.l.NextToken()
-	stmt = &ast.GotoStmt{Label: p.NextTokenKind(token.TOKEN_IDENTIFIER).Content}
-	return
+	label := p.NextTokenKind(token.TOKEN_IDENTIFIER).Content
+	stmt := &ast.GotoStmt{
+		Label: label,
+		Line:  p.l.Line(),
+	}
+	return stmt
 }
 
 func (p *Parser) parseNameList() (names []string) {
@@ -530,12 +536,16 @@ func (p *Parser) parseCallTails() (tails []ast.CallTail) {
 
 func (p *Parser) parseBreakStmt() (stmt *ast.BreakStmt) {
 	p.l.NextToken()
-	return new(ast.BreakStmt)
+	stmt = new(ast.BreakStmt)
+	stmt.Line = p.l.Line()
+	return stmt
 }
 
 func (p *Parser) parseContinueStmt() (stmt *ast.ContinueStmt) {
 	p.l.NextToken()
-	return new(ast.ContinueStmt)
+	stmt = new(ast.ContinueStmt)
+	stmt.Line = p.l.Line()
+	return stmt
 }
 
 func (p *Parser) parseReturnStmt() (stmt *ast.ReturnStmt) {

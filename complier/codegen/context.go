@@ -325,6 +325,7 @@ func (ctx *Context) textSize() uint32 {
 }
 
 type unhandledGoto struct {
+	line      int
 	label     string
 	resizePos int
 	jumpPos   int

@@ -29,7 +29,7 @@ func newNameTable(nameIdx *uint32) *NameTable {
 
 func (nt *NameTable) Set(name string, line uint32) {
 	if v, ok := nt.nameTable[name]; ok {
-		fmt.Printf("variable '%s' already declared at line %d, but redecalres at line %d", name, v.line, line)
+		fmt.Printf("[%s] variable '%s' already declared at line %d, but redecalres at line %d", curParsingFile, name, v.line, line)
 		os.Exit(0)
 	}
 	nt.nameTable[name] = variable{

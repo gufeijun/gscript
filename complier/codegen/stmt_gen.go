@@ -5,9 +5,11 @@ import (
 	"gscript/complier/ast"
 	"gscript/complier/parser"
 	"gscript/proto"
+	"os"
 )
 
 var stdLibGenMode bool
+var curParsingFile string
 
 func SetStdLibGenMode() {
 	stdLibGenMode = true
@@ -21,6 +23,8 @@ type Import struct {
 }
 
 func Gen(parser *parser.Parser, prog *ast.Program, imports []Import, protoNum uint32) proto.Proto {
+	curParsingFile = prog.File
+
 	// number of main proto is zero
 	mainProto := protoNum == 0
 	ctx := newContext(parser)
@@ -281,7 +285,8 @@ func handleGoto(ctx *Context, gotos []unhandledGoto) {
 	for _, _goto := range gotos {
 		label, ok := ctx.frame.validLabels[_goto.label]
 		if !ok {
-			panic(fmt.Sprintf("invalid goto label: %s", _goto.label))
+			fmt.Printf("[%s:%d] invalid goto label: '%s'", curParsingFile, _goto.line, _goto.label)
+			os.Exit(0)
 		}
 		ctx.setSteps(_goto.jumpPos, label.addr)
 		ctx.setSteps(_goto.resizePos, label.nameTableSize)
@@ -290,11 +295,13 @@ func handleGoto(ctx *Context, gotos []unhandledGoto) {
 
 func genGotoStmt(stmt *ast.GotoStmt, ctx *Context) unhandledGoto {
 	if ctx.frame.curTryLevel != 0 {
-		panic("goto in try block is not allowed") // TODO
+		fmt.Printf("[%s:%d] goto statement in try block is not allowed!\n", curParsingFile, stmt.Line)
+		os.Exit(0)
 	}
 	resizePos := ctx.insResizeNameTable(0)
 	jumpPos := ctx.insJumpRel(0)
 	return unhandledGoto{
+		line:      stmt.Line,
 		label:     stmt.Label,
 		resizePos: resizePos,
 		jumpPos:   jumpPos,
@@ -303,6 +310,10 @@ func genGotoStmt(stmt *ast.GotoStmt, ctx *Context) unhandledGoto {
 
 func genFallthroughStmt(stmt *ast.FallthroughStmt, ctx *Context) {
 	b := ctx.frame.bs.latestSwitch()
+	if b == nil {
+		fmt.Printf("[%s] found no matched switch statement for fallthrough at line %d\n", curParsingFile, stmt.Line)
+		os.Exit(0)
+	}
 	ctx.insResizeNameTable(b.nameCnt)
 	pos := ctx.insJumpRel(0)
 	b._fallthrough = &pos
@@ -310,6 +321,10 @@ func genFallthroughStmt(stmt *ast.FallthroughStmt, ctx *Context) {
 
 func genContinueStmt(stmt *ast.ContinueStmt, ctx *Context) {
 	b := ctx.frame.bs.latestFor()
+	if b == nil {
+		fmt.Printf("[%s] found no matched loop statement for continue at line %d\n", curParsingFile, stmt.Line)
+		os.Exit(0)
+	}
 	outerTryLevel := b.curTryLevel
 	for top := ctx.frame.curTryLevel; outerTryLevel < top; outerTryLevel++ {
 		ctx.writeIns(proto.INS_END_TRY)
@@ -319,6 +334,10 @@ func genContinueStmt(stmt *ast.ContinueStmt, ctx *Context) {
 
 func genBreakStmt(stmt *ast.BreakStmt, ctx *Context) {
 	b := ctx.frame.bs.top()
+	if b == nil {
+		fmt.Printf("[%s] found no matched switch or loop statement for break at line %d\n", curParsingFile, stmt.Line)
+		os.Exit(0)
+	}
 	var breaks *[]int
 	var outerTryLevel int
 	if fb, ok := b.(*forBlock); ok {

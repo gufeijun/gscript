@@ -63,15 +63,22 @@ type AnonymousFuncCallStmt struct {
 	CallTails []CallTail
 }
 
-type BreakStmt struct{}
+type BreakStmt struct {
+	Line int
+}
 
-type ContinueStmt struct{}
+type ContinueStmt struct {
+	Line int
+}
 
 type GotoStmt struct {
+	Line  int
 	Label string
 }
 
-type FallthroughStmt struct{}
+type FallthroughStmt struct {
+	Line int
+}
 
 type WhileStmt struct {
 	Condition Exp
