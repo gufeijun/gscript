@@ -1,6 +1,7 @@
 package complier
 
 import (
+	"fmt"
 	"gscript/proto"
 	"os"
 	"path/filepath"
@@ -33,7 +34,9 @@ func newGraph() *graph {
 func abs(path string) string {
 	path, err := filepath.Abs(path)
 	if err != nil {
-		panic("") // TODO
+		fmt.Printf("get absolute filepath of '%s' failed\n", path)
+		fmt.Printf("\terror message: %v\n", err)
+		os.Exit(0)
 	}
 	return path
 }
@@ -73,15 +76,21 @@ func hasCircle(n *node) bool {
 	return false
 }
 
+func chdir(dir string) {
+	err := os.Chdir(dir)
+	if err == nil {
+		return
+	}
+	fmt.Printf("change work dir failed\n")
+	fmt.Printf("\terror message: %v\n", err)
+	os.Exit(0)
+}
+
 func getImportPath(base string, _import string) string {
 	curDir := abs(".")
-	if err := os.Chdir(filepath.Dir(base)); err != nil {
-		panic(err)
-	}
+	chdir(filepath.Dir(base))
 	res := abs(_import)
-	if err := os.Chdir(curDir); err != nil {
-		panic(err)
-	}
+	chdir(curDir)
 	return res
 }
 
@@ -103,9 +112,4 @@ func (g *graph) insert(path string) *node {
 	n := &node{pathname: path, protoNum: uint32(len(g.nodes))}
 	g.nodes[path] = n
 	return n
-}
-
-func (g *graph) getNode(path string) (n *node, ok bool) {
-	n, ok = g.nodes[abs(path)]
-	return
 }
