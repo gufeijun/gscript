@@ -25,7 +25,7 @@ func newConstTable() *ConstTable {
 
 func (ct *ConstTable) saveEnum(name string, line int, num int64) {
 	if exists, ok := ct.enums[name]; ok {
-		fmt.Printf("enum name '%s' already defines at line %d, but redeclares at line %d", name, exists.line, line)
+		fmt.Printf("[%s] enum name '%s' already defines at line %d, but redeclares at line %d", curParsingFile, name, exists.line, line)
 		os.Exit(0)
 	}
 	ct.enums[name] = enum{

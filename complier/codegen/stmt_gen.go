@@ -231,15 +231,15 @@ func bindUpValue(ctx *Context, funcIdx uint32, anonymous bool) {
 
 func getUpValueIdx(frame *StackFrame, ctx *Context, upValue *UpValue) proto.UpValuePtr {
 	if upValue.level == 0 {
-		return proto.UpValuePtr{true, upValue.nameIdx}
+		return proto.UpValuePtr{DirectDependent: true, Index: upValue.nameIdx}
 	}
 	upValue.level--
 	valueIdx, _, ok := frame.vt.get(upValue.name)
 	if ok {
-		return proto.UpValuePtr{false, valueIdx}
+		return proto.UpValuePtr{DirectDependent: false, Index: valueIdx}
 	}
 	valueIdx = frame.vt.set(upValue.name, upValue.level, upValue.nameIdx)
-	return proto.UpValuePtr{false, valueIdx}
+	return proto.UpValuePtr{DirectDependent: false, Index: valueIdx}
 }
 
 func genAnonymousFuncCallStmt(stmt *ast.AnonymousFuncCallStmt, ctx *Context) {
