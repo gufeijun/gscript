@@ -47,19 +47,19 @@ func TestVarAssignStmt(t *testing.T) {
 		`d.c.e,d[sum(1,"2")] *= 8,2`,
 	}
 	wants := []*ast.VarAssignStmt{
-		{ASIGN_OP_ADDEQ, []Var{{"a", nil}, {"b", nil}}, []Exp{
+		{1, ASIGN_OP_ADDEQ, []Var{{"a", nil}, {"b", nil}}, []Exp{
 			&NumberLiteralExp{int64(1)},
 			&NumberLiteralExp{int64(1)},
 		}},
-		{ASIGN_OP_DIVEQ, []Var{{"a", nil}}, []Exp{&NumberLiteralExp{int64(2)}}},
-		{ASIGN_OP_MODEQ, []Var{{"c", []Exp{&StringLiteralExp{"ac"}}}}, []Exp{
+		{1, ASIGN_OP_DIVEQ, []Var{{"a", nil}}, []Exp{&NumberLiteralExp{int64(2)}}},
+		{1, ASIGN_OP_MODEQ, []Var{{"c", []Exp{&StringLiteralExp{"ac"}}}}, []Exp{
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(1)}},
 		}},
 
-		{ASIGN_OP_MULEQ, []Var{
+		{1, ASIGN_OP_MULEQ, []Var{
 			{"d", []Exp{&StringLiteralExp{"c"}, &StringLiteralExp{"e"}}},
 			{"d", []Exp{&FuncCallExp{
-				Func: &NameExp{"sum"},
+				Func: &NameExp{1, "sum"},
 				Args: []Exp{&NumberLiteralExp{int64(1)}, &StringLiteralExp{"2"}},
 			}}},
 		}, []Exp{&NumberLiteralExp{int64(8)}, &NumberLiteralExp{int64(2)}}},
@@ -75,12 +75,12 @@ func TestVarAssignStmt(t *testing.T) {
 
 func TestVarIncOrDecStmt(t *testing.T) {
 	srcs := []string{
-		"arr[i]++",
+		`arr[i]++`,
 		`obj["key"].a--`,
 	}
 	wants := []*VarAssignStmt{
-		{ASIGN_OP_ADDEQ, []Var{{"arr", []Exp{&NameExp{"i"}}}}, []Exp{&NumberLiteralExp{int64(1)}}},
-		{ASIGN_OP_SUBEQ, []Var{{"obj", []Exp{
+		{0, ASIGN_OP_ADDEQ, []Var{{"arr", []Exp{&NameExp{1, "i"}}}}, []Exp{&NumberLiteralExp{int64(1)}}},
+		{0, ASIGN_OP_SUBEQ, []Var{{"obj", []Exp{
 			&StringLiteralExp{"key"},
 			&StringLiteralExp{"a"},
 		}}}, []Exp{&NumberLiteralExp{int64(1)}}},
@@ -114,7 +114,7 @@ func TestFuncCallStmt(t *testing.T) {
 		&NamedFuncCallStmt{
 			Prefix: "funcs",
 			CallTails: []CallTail{
-				CallTail{Attrs: []Exp{&NumberLiteralExp{int64(0)}}, Args: []Exp{&NameExp{"a"}, &NameExp{"b"}}},
+				CallTail{Attrs: []Exp{&NumberLiteralExp{int64(0)}}, Args: []Exp{&NameExp{1, "a"}, &NameExp{1, "b"}}},
 			},
 		},
 		&NamedFuncCallStmt{
@@ -223,8 +223,8 @@ func TestIncOrDecVarStmt(t *testing.T) {
 		`--obj["key"].a`,
 	}
 	wants := []*VarAssignStmt{
-		{ASIGN_OP_ADDEQ, []Var{{"arr", []Exp{&NameExp{"i"}}}}, []Exp{&NumberLiteralExp{int64(1)}}},
-		{ASIGN_OP_SUBEQ, []Var{{"obj", []Exp{
+		{0, ASIGN_OP_ADDEQ, []Var{{"arr", []Exp{&NameExp{1, "i"}}}}, []Exp{&NumberLiteralExp{int64(1)}}},
+		{0, ASIGN_OP_SUBEQ, []Var{{"obj", []Exp{
 			&StringLiteralExp{"key"},
 			&StringLiteralExp{"a"},
 		}}}, []Exp{&NumberLiteralExp{int64(1)}}},
@@ -271,37 +271,29 @@ func TestSwitchStmt(t *testing.T) {
 switch(a)
 {
 case 1:
-	i++
 case 2,3:
-	i--
-	call(a,b)
 }`,
 		`
 switch(a){
 case "hello":
-	++i
 default:
-	--i
 }
 `,
 	}
 	wants := []*SwitchStmt{
 		{
-			Value: &NameExp{"a"},
+			Value: &NameExp{1, "a"},
 		},
 		{
-			Value: &NameExp{"a"},
-			Cases: [][]Exp{{&NumberLiteralExp{int64(1)}}, {&NumberLiteralExp{int64(2)}, &NumberLiteralExp{int64(3)}}},
-			Blocks: [][]BlockStmt{
-				{NewParser(newLexer("i++")).parseVarOpOrLabel()},
-				{NewParser(newLexer("i--")).parseVarOpOrLabel(), NewParser(newLexer("call(a,b)")).parseVarOpOrLabel()},
-			},
+			Value:  &NameExp{2, "a"},
+			Cases:  [][]Exp{{&NumberLiteralExp{int64(1)}}, {&NumberLiteralExp{int64(2)}, &NumberLiteralExp{int64(3)}}},
+			Blocks: [][]BlockStmt{nil, nil},
 		},
 		{
-			Value:   &NameExp{"a"},
+			Value:   &NameExp{2, "a"},
 			Cases:   [][]Exp{{&StringLiteralExp{"hello"}}},
-			Blocks:  [][]BlockStmt{{NewParser(newLexer("++i")).parseIncOrDecVar()}},
-			Default: []BlockStmt{NewParser(newLexer("--i")).parseIncOrDecVar()},
+			Blocks:  [][]BlockStmt{nil},
+			Default: nil,
 		},
 	}
 	for i, src := range srcs {
@@ -330,14 +322,14 @@ loop(let k,v:arr){
 `,
 	}
 	wants := []*LoopStmt{
-		{"", "v", parseExp(NewParser(newLexer(`m["arr"]`))), Block{
-			[]BlockStmt{NewParser(newLexer("print(v)")).parseVarOpOrLabel()},
+		{"", "v", parseExp(NewParser(newLexer("\nm[\"arr\"]"))), Block{
+			[]BlockStmt{NewParser(newLexer("\n\nprint(v)")).parseVarOpOrLabel()},
 		}},
-		{"k", "v", parseExp(NewParser(newLexer("arr"))), Block{
-			[]BlockStmt{NewParser(newLexer("print(k,v)")).parseVarOpOrLabel()},
+		{"k", "v", parseExp(NewParser(newLexer("\narr"))), Block{
+			[]BlockStmt{NewParser(newLexer("\n\nprint(k,v)")).parseVarOpOrLabel()},
 		}},
-		{"k", "v", parseExp(NewParser(newLexer("arr"))), Block{
-			[]BlockStmt{NewParser(newLexer("print(k,v)")).parseVarOpOrLabel()},
+		{"k", "v", parseExp(NewParser(newLexer("\narr"))), Block{
+			[]BlockStmt{NewParser(newLexer("\n\nprint(k,v)")).parseVarOpOrLabel()},
 		}},
 	}
 	for i, src := range srcs {
@@ -365,10 +357,10 @@ while(i--)
 	wants := []*WhileStmt{
 		{&NumberLiteralExp{int64(1)}, Block{
 			[]BlockStmt{
-				NewParser(newLexer("thread(handleConn,conn)")).parseVarOpOrLabel(),
+				NewParser(newLexer("\n\nthread(handleConn,conn)")).parseVarOpOrLabel(),
 			},
 		}},
-		{parseExp(NewParser(newLexer("i--"))), Block{[]BlockStmt{NewParser(newLexer("print(i)")).parseVarOpOrLabel()}}},
+		{parseExp(NewParser(newLexer("\ni--"))), Block{[]BlockStmt{NewParser(newLexer("\n\nprint(i)")).parseVarOpOrLabel()}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -392,14 +384,14 @@ for(i=0;i<10;i++)
 `,
 	}
 	wants := []*ForStmt{
-		{NewParser(newLexer("low,high=0,len(arr)-1")).parseVarOpOrLabel().(*VarAssignStmt), nil,
-			parseExp(NewParser(newLexer("low<high"))),
-			NewParser(newLexer("low,high = low+1,high-1")).parseVarOpOrLabel().(*VarAssignStmt),
-			Block{[]BlockStmt{NewParser(newLexer("arr[low],arr[high]=arr[high],arr[low]")).parseVarOpOrLabel()}},
+		{NewParser(newLexer("\nlow,high=0,len(arr)-1")).parseVarOpOrLabel().(*VarAssignStmt), nil,
+			parseExp(NewParser(newLexer("\nlow<high"))),
+			NewParser(newLexer("\nlow,high = low+1,high-1")).parseVarOpOrLabel().(*VarAssignStmt),
+			Block{[]BlockStmt{NewParser(newLexer("\n\narr[low],arr[high]=arr[high],arr[low]")).parseVarOpOrLabel()}},
 		},
-		{NewParser(newLexer("i=0")).parseVarOpOrLabel().(*VarAssignStmt), nil,
-			parseExp(NewParser(newLexer("i<10"))), NewParser(newLexer("i++")).parseVarOpOrLabel().(*VarAssignStmt),
-			Block{[]BlockStmt{NewParser(newLexer("print(i)")).parseVarOpOrLabel()}},
+		{NewParser(newLexer("\ni=0")).parseVarOpOrLabel().(*VarAssignStmt), nil,
+			parseExp(NewParser(newLexer("\ni<10"))), NewParser(newLexer("\ni++")).parseVarOpOrLabel().(*VarAssignStmt),
+			Block{[]BlockStmt{NewParser(newLexer("\n\nprint(i)")).parseVarOpOrLabel()}},
 		},
 	}
 	for i, src := range srcs {
@@ -432,18 +424,18 @@ else print(2)
 `,
 	}
 	wants := []*IfStmt{
-		{[]Exp{&NameExp{"a"}}, []Block{
+		{[]Exp{&NameExp{2, "a"}}, []Block{
 			Block{[]BlockStmt{NewParser(newLexer("print(true)")).parseVarOpOrLabel()}},
 		}},
-		{[]Exp{&NameExp{"a"}}, []Block{
+		{[]Exp{&NameExp{2, "a"}}, []Block{
 			Block{[]BlockStmt{NewParser(newLexer("print(true)")).parseVarOpOrLabel()}},
 		}},
-		{[]Exp{&NameExp{"a"}, &NameExp{"b"}, &NameExp{"c"}}, []Block{
+		{[]Exp{&NameExp{2, "a"}, &NameExp{3, "b"}, &NameExp{4, "c"}}, []Block{
 			Block{[]BlockStmt{NewParser(newLexer("print(1)")).parseVarOpOrLabel()}},
 			Block{[]BlockStmt{NewParser(newLexer("print(2)")).parseVarOpOrLabel()}},
 			Block{[]BlockStmt{NewParser(newLexer("print(3)")).parseVarOpOrLabel()}},
 		}},
-		{[]Exp{&NameExp{"a"}, &TrueExp{}}, []Block{
+		{[]Exp{&NameExp{2, "a"}, &TrueExp{}}, []Block{
 			Block{[]BlockStmt{NewParser(newLexer("print(1)")).parseVarOpOrLabel()}},
 			Block{[]BlockStmt{NewParser(newLexer("print(2)")).parseVarOpOrLabel()}},
 		}},
@@ -473,7 +465,7 @@ return {a:1,b:2};
 			Keys: []interface{}{"a", "b"},
 			Vals: []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
 		}}},
-		{Args: []Exp{&NameExp{"a"}, &NameExp{"b"}}},
+		{Args: []Exp{&NameExp{2, "a"}, &NameExp{2, "b"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)

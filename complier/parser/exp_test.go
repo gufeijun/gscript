@@ -17,8 +17,8 @@ func TestParseTerm12(t *testing.T) {
 		`a?(b?c:d):e`,
 	}
 	var wants = []*TernaryOpExp{
-		{&BinOpExp{BINOP_LOR, &NameExp{"a"}, &NameExp{"c"}}, &BinOpExp{BINOP_ADD, &NameExp{"b"}, &NameExp{"d"}}, &NameExp{"c"}},
-		{&NameExp{"a"}, &TernaryOpExp{&NameExp{"b"}, &NameExp{"c"}, &NameExp{"d"}}, &NameExp{"e"}},
+		{&BinOpExp{BINOP_LOR, &NameExp{1, "a"}, &NameExp{1, "c"}}, &BinOpExp{BINOP_ADD, &NameExp{1, "b"}, &NameExp{1, "d"}}, &NameExp{1, "c"}},
+		{&NameExp{1, "a"}, &TernaryOpExp{&NameExp{1, "b"}, &NameExp{1, "c"}, &NameExp{1, "d"}}, &NameExp{1, "e"}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -35,8 +35,8 @@ func TestParseTerm11(t *testing.T) {
 		`a||b&&c`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_LOR, &BinOpExp{BINOP_LOR, &NameExp{"a"}, &NameExp{"b"}}, &NameExp{"c"}},
-		{BINOP_LOR, &NameExp{"a"}, &BinOpExp{BINOP_LAND, &NameExp{"b"}, &NameExp{"c"}}},
+		{BINOP_LOR, &BinOpExp{BINOP_LOR, &NameExp{1, "a"}, &NameExp{1, "b"}}, &NameExp{1, "c"}},
+		{BINOP_LOR, &NameExp{1, "a"}, &BinOpExp{BINOP_LAND, &NameExp{1, "b"}, &NameExp{1, "c"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -53,8 +53,8 @@ func TestParseTerm10(t *testing.T) {
 		`a&&b|c`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_LAND, &NameExp{"a"}, &NameExp{"b"}},
-		{BINOP_LAND, &NameExp{"a"}, &BinOpExp{BINOP_OR, &NameExp{"b"}, &NameExp{"c"}}},
+		{BINOP_LAND, &NameExp{1, "a"}, &NameExp{1, "b"}},
+		{BINOP_LAND, &NameExp{1, "a"}, &BinOpExp{BINOP_OR, &NameExp{1, "b"}, &NameExp{1, "c"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -71,8 +71,8 @@ func TestParseTerm9(t *testing.T) {
 		`a|b^c`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_OR, &NameExp{"a"}, &NameExp{"b"}},
-		{BINOP_OR, &NameExp{"a"}, &BinOpExp{BINOP_XOR, &NameExp{"b"}, &NameExp{"c"}}},
+		{BINOP_OR, &NameExp{1, "a"}, &NameExp{1, "b"}},
+		{BINOP_OR, &NameExp{1, "a"}, &BinOpExp{BINOP_XOR, &NameExp{1, "b"}, &NameExp{1, "c"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -89,8 +89,8 @@ func TestParseTerm8(t *testing.T) {
 		`a^b&c`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_XOR, &NameExp{"a"}, &NameExp{"b"}},
-		{BINOP_XOR, &NameExp{"a"}, &BinOpExp{BINOP_AND, &NameExp{"b"}, &NameExp{"c"}}},
+		{BINOP_XOR, &NameExp{1, "a"}, &NameExp{1, "b"}},
+		{BINOP_XOR, &NameExp{1, "a"}, &BinOpExp{BINOP_AND, &NameExp{1, "b"}, &NameExp{1, "c"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -107,8 +107,8 @@ func TestParseTerm7(t *testing.T) {
 		`a&b==c`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_AND, &NameExp{"a"}, &NameExp{"b"}},
-		{BINOP_AND, &NameExp{"a"}, &BinOpExp{BINOP_EQ, &NameExp{"b"}, &NameExp{"c"}}},
+		{BINOP_AND, &NameExp{1, "a"}, &NameExp{1, "b"}},
+		{BINOP_AND, &NameExp{1, "a"}, &BinOpExp{BINOP_EQ, &NameExp{1, "b"}, &NameExp{1, "c"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -126,9 +126,9 @@ func TestParseTerm6(t *testing.T) {
 		`a==b>=c`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_EQ, &NameExp{"a"}, &NameExp{"b"}},
-		{BINOP_EQ, &BinOpExp{BINOP_NE, &NameExp{"a"}, &NameExp{"b"}}, &NameExp{"c"}},
-		{BINOP_EQ, &NameExp{"a"}, &BinOpExp{BINOP_GE, &NameExp{"b"}, &NameExp{"c"}}},
+		{BINOP_EQ, &NameExp{1, "a"}, &NameExp{1, "b"}},
+		{BINOP_EQ, &BinOpExp{BINOP_NE, &NameExp{1, "a"}, &NameExp{1, "b"}}, &NameExp{1, "c"}},
+		{BINOP_EQ, &NameExp{1, "a"}, &BinOpExp{BINOP_GE, &NameExp{1, "b"}, &NameExp{1, "c"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -147,10 +147,10 @@ func TestParseTerm5(t *testing.T) {
 		`a>=8>9`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_GT, &NameExp{"a"}, &BinOpExp{BINOP_SHL, &NameExp{"b"}, &NameExp{"c"}}},
+		{BINOP_GT, &NameExp{1, "a"}, &BinOpExp{BINOP_SHL, &NameExp{1, "b"}, &NameExp{1, "c"}}},
 		{BINOP_LE, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(3)}},
 		{BINOP_LT, &NumberLiteralExp{int64(2)}, &NumberLiteralExp{int64(4)}},
-		{BINOP_GT, &BinOpExp{BINOP_GE, &NameExp{"a"}, &NumberLiteralExp{int64(8)}}, &NumberLiteralExp{int64(9)}},
+		{BINOP_GT, &BinOpExp{BINOP_GE, &NameExp{1, "a"}, &NumberLiteralExp{int64(8)}}, &NumberLiteralExp{int64(9)}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -167,8 +167,8 @@ func TestParseTerm4(t *testing.T) {
 		`a>>b<<d`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_SHL, &NameExp{"a"}, &BinOpExp{BINOP_ADD, &NameExp{"b"}, &NameExp{"c"}}},
-		{BINOP_SHL, &BinOpExp{BINOP_SHR, &NameExp{"a"}, &NameExp{"b"}}, &NameExp{"d"}},
+		{BINOP_SHL, &NameExp{1, "a"}, &BinOpExp{BINOP_ADD, &NameExp{1, "b"}, &NameExp{1, "c"}}},
+		{BINOP_SHL, &BinOpExp{BINOP_SHR, &NameExp{1, "a"}, &NameExp{1, "b"}}, &NameExp{1, "d"}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -187,10 +187,10 @@ func TestParseTerm3(t *testing.T) {
 		`(a-b)*c`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_ADD, &NameExp{"a"}, &NameExp{"b"}},
-		{BINOP_SUB, &BinOpExp{BINOP_ATTR, &NameExp{"a"}, &StringLiteralExp{"b"}}, &NameExp{"c"}},
-		{BINOP_SUB, &NameExp{"a"}, &BinOpExp{BINOP_MUL, &NameExp{"b"}, &NameExp{"c"}}},
-		{BINOP_MUL, &BinOpExp{BINOP_SUB, &NameExp{"a"}, &NameExp{"b"}}, &NameExp{"c"}},
+		{BINOP_ADD, &NameExp{1, "a"}, &NameExp{1, "b"}},
+		{BINOP_SUB, &BinOpExp{BINOP_ATTR, &NameExp{1, "a"}, &StringLiteralExp{"b"}}, &NameExp{1, "c"}},
+		{BINOP_SUB, &NameExp{1, "a"}, &BinOpExp{BINOP_MUL, &NameExp{1, "b"}, &NameExp{1, "c"}}},
+		{BINOP_MUL, &BinOpExp{BINOP_SUB, &NameExp{1, "a"}, &NameExp{1, "b"}}, &NameExp{1, "c"}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -210,11 +210,11 @@ func TestParseTerm2(t *testing.T) {
 		`a/b*c`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_DIV, &UnOpExp{UNOP_NEG, &NameExp{"a"}}, &NameExp{"b"}},
-		{BINOP_MUL, &UnOpExp{UNOP_NOT, &BinOpExp{BINOP_ATTR, &NameExp{"arr"}, &NumberLiteralExp{int64(0)}}}, &NumberLiteralExp{int64(100)}},
-		{BINOP_IDIV, &UnOpExp{UNOP_INC_, &BinOpExp{BINOP_ATTR, &NameExp{"arr"}, &NumberLiteralExp{int64(0)}}}, &NumberLiteralExp{int64(20)}},
-		{BINOP_MOD, &UnOpExp{UNOP_DEC, &BinOpExp{BINOP_ATTR, &NameExp{"arr"}, &NumberLiteralExp{int64(0)}}}, &NameExp{"p"}},
-		{BINOP_MUL, &BinOpExp{BINOP_DIV, &NameExp{"a"}, &NameExp{"b"}}, &NameExp{"c"}},
+		{BINOP_DIV, &UnOpExp{UNOP_NEG, &NameExp{1, "a"}}, &NameExp{1, "b"}},
+		{BINOP_MUL, &UnOpExp{UNOP_NOT, &BinOpExp{BINOP_ATTR, &NameExp{1, "arr"}, &NumberLiteralExp{int64(0)}}}, &NumberLiteralExp{int64(100)}},
+		{BINOP_IDIV, &UnOpExp{UNOP_INC_, &BinOpExp{BINOP_ATTR, &NameExp{1, "arr"}, &NumberLiteralExp{int64(0)}}}, &NumberLiteralExp{int64(20)}},
+		{BINOP_MOD, &UnOpExp{UNOP_DEC, &BinOpExp{BINOP_ATTR, &NameExp{1, "arr"}, &NumberLiteralExp{int64(0)}}}, &NameExp{1, "p"}},
+		{BINOP_MUL, &BinOpExp{BINOP_DIV, &NameExp{1, "a"}, &NameExp{1, "b"}}, &NameExp{1, "c"}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -235,9 +235,9 @@ func TestParseTerm1(t *testing.T) {
 	}
 	var wants = []*UnOpExp{
 		{UNOP_LNOT, &FalseExp{}},
-		{UNOP_NOT, &UnOpExp{UNOP_INC, &NameExp{"a"}}},
-		{UNOP_NEG, &UnOpExp{UNOP_DEC_, &NameExp{"a"}}},
-		{UNOP_NEG, &BinOpExp{BINOP_ATTR, &NameExp{"arr"}, &NumberLiteralExp{int64(1)}}},
+		{UNOP_NOT, &UnOpExp{UNOP_INC, &NameExp{1, "a"}}},
+		{UNOP_NEG, &UnOpExp{UNOP_DEC_, &NameExp{1, "a"}}},
+		{UNOP_NEG, &BinOpExp{BINOP_ATTR, &NameExp{1, "arr"}, &NumberLiteralExp{int64(1)}}},
 		{UNOP_LNOT, &UnOpExp{UNOP_LNOT, &UnOpExp{UNOP_NOT, &NumberLiteralExp{int64(1)}}}},
 	}
 	for i, src := range srcs {
@@ -257,10 +257,10 @@ func TestParseTerm0(t *testing.T) {
 		`a.b--`,
 	}
 	var wants = []*UnOpExp{
-		{UNOP_INC, &NameExp{"a"}},
-		{UNOP_DEC, &BinOpExp{BINOP_ATTR, &NameExp{"a"}, &NumberLiteralExp{int64(0)}}},
-		{UNOP_INC_, &NameExp{"a"}},
-		{UNOP_DEC_, &BinOpExp{BINOP_ATTR, &NameExp{"a"}, &StringLiteralExp{"b"}}},
+		{UNOP_INC, &NameExp{1, "a"}},
+		{UNOP_DEC, &BinOpExp{BINOP_ATTR, &NameExp{1, "a"}, &NumberLiteralExp{int64(0)}}},
+		{UNOP_INC_, &NameExp{1, "a"}},
+		{UNOP_DEC_, &BinOpExp{BINOP_ATTR, &NameExp{1, "a"}, &StringLiteralExp{"b"}}},
 	}
 
 	for i, src := range srcs {
@@ -281,9 +281,9 @@ func TestFuncCallOrAttrExp(t *testing.T) {
 				BinOp: BINOP_ATTR,
 				Exp1: &BinOpExp{
 					BinOp: BINOP_ATTR,
-					Exp1:  &NameExp{"m"},
+					Exp1:  &NameExp{1, "m"},
 					Exp2: &FuncCallExp{
-						Func: &NameExp{"sum"},
+						Func: &NameExp{1, "sum"},
 						Args: []Exp{
 							&NumberLiteralExp{int64(1)},
 							&NumberLiteralExp{int64(2)},
@@ -310,8 +310,8 @@ func TestFuncCallExp(t *testing.T) {
 		`sum()(1,2)`,
 	}
 	var wants = []*FuncCallExp{
-		{&NameExp{"sum"}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
-		{&FuncCallExp{&NameExp{"sum"}, nil}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
+		{&NameExp{1, "sum"}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
+		{&FuncCallExp{&NameExp{1, "sum"}, nil}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -329,10 +329,10 @@ func TestParseMapAccessExp(t *testing.T) {
 		`map["b"][1]`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_ATTR, &NameExp{"map"}, &StringLiteralExp{"a"}},
+		{BINOP_ATTR, &NameExp{1, "map"}, &StringLiteralExp{"a"}},
 		{BINOP_ATTR, &BinOpExp{
 			BINOP_ATTR,
-			&NameExp{"map"},
+			&NameExp{1, "map"},
 			&StringLiteralExp{"b"},
 		}, &NumberLiteralExp{int64(1)}},
 	}
@@ -352,10 +352,10 @@ func TestParseAttributeAccessExp(t *testing.T) {
 		`person.father.name`,
 	}
 	var wants = []*BinOpExp{
-		{BINOP_ATTR, &NameExp{"person"}, &StringLiteralExp{"name"}},
+		{BINOP_ATTR, &NameExp{1, "person"}, &StringLiteralExp{"name"}},
 		{BINOP_ATTR, &BinOpExp{
 			BINOP_ATTR,
-			&NameExp{"person"},
+			&NameExp{1, "person"},
 			&StringLiteralExp{"father"},
 		}, &StringLiteralExp{"name"}},
 	}
@@ -388,14 +388,14 @@ func TestParseArrLiteralExp(t *testing.T) {
 	}
 	var wants = []*ArrLiteralExp{
 		{nil},
-		{[]Exp{&NameExp{"a"}, &NameExp{"b"}}},
+		{[]Exp{&NameExp{1, "a"}, &NameExp{1, "b"}}},
 		{[]Exp{&NumberLiteralExp{int64(1)}, &ArrLiteralExp{
 			[]Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
 		}}},
 		{[]Exp{&StringLiteralExp{"good"}}},
 		{[]Exp{&MapLiteralExp{
 			Keys: []interface{}{"a"},
-			Vals: []Exp{&NameExp{"a"}},
+			Vals: []Exp{&NameExp{1, "a"}},
 		}}},
 		{[]Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
 		{[]Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
@@ -446,8 +446,8 @@ func TestNewObjectExp(t *testing.T) {
 		{"people", nil},
 		{"people", nil},
 		{"people", []Exp{&StringLiteralExp{"jack"}, &NumberLiteralExp{int64(12)}}},
-		{"student", []Exp{&NameExp{"name"}}},
-		{"student", []Exp{&NameExp{"name"}, &NameExp{"age"}}},
+		{"student", []Exp{&NameExp{1, "name"}}},
+		{"student", []Exp{&NameExp{1, "name"}, &NameExp{1, "age"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
