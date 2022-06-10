@@ -18,7 +18,7 @@ const (
 
 type Lexer struct {
 	line       int          // current line number
-	kth        int          // index of current charactor in current line
+	column     int          // column of current charactor in current line
 	cursor     int          // number of next character needs to be parse
 	src        []byte       // source code
 	srcFile    string       // source file path
@@ -39,8 +39,8 @@ func (l *Lexer) Line() int {
 	return l.line
 }
 
-func (l *Lexer) Kth() int {
-	return l.kth
+func (l *Lexer) Column() int {
+	return l.column
 }
 
 func (l *Lexer) SrcFile() string {
@@ -387,7 +387,7 @@ func (l *Lexer) skipWhiteSpace() (breakLine bool) {
 				break
 			}
 			if nextCh != CHAR_LF {
-				l.kth = 0
+				l.column = 0
 				l.line++
 				break
 			}
@@ -395,12 +395,12 @@ func (l *Lexer) skipWhiteSpace() (breakLine bool) {
 			fallthrough
 		case CHAR_LF:
 			breakLine = true
-			l.kth = 0
+			l.column = 0
 			l.line++
 		case CHAR_SPACE:
-			l.kth++
+			l.column++
 		case CHAR_TAB:
-			l.kth++
+			l.column++
 		default:
 			return
 		}
@@ -425,7 +425,7 @@ func (l *Lexer) lookAhead(k int) byte {
 
 func (l *Lexer) error(format string, args ...interface{}) {
 	errMsg := fmt.Sprintf(format, args...)
-	fmt.Printf("Lexer error: [%s:%d:%d]\n", l.srcFile, l.line, l.kth+1)
+	fmt.Printf("Lexer error: [%s:%d:%d]\n", l.srcFile, l.line, l.column+1)
 	fmt.Printf("\t%s\n", errMsg)
 	os.Exit(0)
 }
@@ -433,7 +433,7 @@ func (l *Lexer) error(format string, args ...interface{}) {
 // move cursor and kth @k steps
 func (l *Lexer) forward(k int) {
 	l.cursor += k
-	l.kth += k
+	l.column += k
 }
 
 func (l *Lexer) reachEndOfFile() bool {
@@ -444,7 +444,7 @@ func (l *Lexer) genToken(kind, contentLength int) {
 	l.curToken = &token.Token{
 		Kind:    kind,
 		Line:    l.line,
-		Kth:     l.kth,
+		Kth:     l.column,
 		Content: string(l.src[l.cursor : l.cursor+contentLength]),
 	}
 }
