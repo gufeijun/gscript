@@ -14,20 +14,20 @@ func newSymbolTable() *symbolTable {
 
 func (st *symbolTable) getValue(idx uint32) interface{} {
 	if idx >= uint32(len(st.values)) {
-		panic("index out of symbol table")
+		exit("index(%d) out of variables table length(%d)", idx, len(st.values))
 	}
 	return st.values[idx].Value
 }
 
 func (st *symbolTable) setValue(idx uint32, val interface{}) {
 	if idx >= uint32(len(st.values)) {
-		panic("index out of symbol table")
+		exit("index(%d) out of variables table length(%d)", idx, len(st.values))
 	}
 	st.values[idx].Value = val
 }
 
 func (st *symbolTable) pushSymbol(val interface{}) {
-	st.values = append(st.values, &types.GsValue{val})
+	st.values = append(st.values, &types.GsValue{Value: val})
 }
 
 func (st *symbolTable) top() (val interface{}) {

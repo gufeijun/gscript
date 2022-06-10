@@ -85,7 +85,7 @@ func actionUnaryNOT(vm *VM) {
 		vm.curProto.stack.Replace(^int64(v))
 		return
 	}
-	panic("") // TODO
+	vm.exit("operator '^' is only for Integer")
 }
 
 func actionUnaryNEG(vm *VM) {
@@ -98,7 +98,7 @@ func actionUnaryNEG(vm *VM) {
 		vm.curProto.stack.Replace(-float64(v))
 		return
 	}
-	panic("") // TODO
+	vm.exit("operator '-' is only for Number")
 }
 
 func actionUnaryLNOT(vm *VM) {
@@ -195,10 +195,10 @@ func actionBinaryATTR(vm *VM) {
 	if arr, ok := obj.(*types.Array); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
-			panic("array index should be integer") // TODO
+			vm.exit("array index should be integer")
 		}
 		if idx > int64(len(arr.Data)) {
-			panic("index out of range") // TODO
+			vm.exit("index out of range")
 		}
 		vm.curProto.stack.Replace(arr.Data[idx])
 		return
@@ -206,23 +206,22 @@ func actionBinaryATTR(vm *VM) {
 	if str, ok := obj.(string); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
-			panic("array index should be integer") // TODO
+			vm.exit("array index should be integer")
 		}
 		if idx > int64(len(str)) {
-			panic("index out of range") // TODO
+			vm.exit("index out of range")
 		}
 		vm.curProto.stack.Replace(int64(str[idx]))
 		return
 	}
 	if obj, ok := obj.(*types.Object); ok {
 		if key == nil {
-			panic("map key should not be nil")
+			vm.exit("map key should not be nil")
 		}
 		vm.curProto.stack.Replace(obj.Data[key])
 		return
 	}
-	// TODO
-	panic(fmt.Sprintf("do not support attr access for %T", obj))
+	vm.exit("do not support attr access for %T", obj)
 }
 
 func actionLoadNil(vm *VM) {
@@ -234,17 +233,7 @@ func actionLoadConst(vm *VM) {
 }
 
 func actionLoadStdConst(vm *VM) {
-	libIdx := vm.getOpNum()
-	constIdx := vm.getOpNum()
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println(libIdx, constIdx)
-			fmt.Println(vm.curProto.filepath)
-			panic("good")
-		}
-	}()
-	vm.curProto.stack.Push(vm.stdlibs[libIdx].Consts[constIdx])
-	// vm.curProto.stack.Push(vm.stdlibs[vm.getOpNum()].Consts[vm.getOpNum()])
+	vm.curProto.stack.Push(vm.stdlibs[vm.getOpNum()].Consts[vm.getOpNum()])
 }
 
 func actionLoadName(vm *VM) {
@@ -340,7 +329,7 @@ func actionStoreUpValue(vm *VM) {
 func actionStoreKV(vm *VM) {
 	obj, ok := vm.curProto.frame.symbolTable.top().(*types.Object)
 	if !ok {
-		panic("STORE_KV: target is not an object") // TODO
+		vm.exit("STORE_KV: target is not an object")
 	}
 	val := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
@@ -394,7 +383,7 @@ func actionNewMap(vm *VM) {
 		key := vm.curProto.stack.Top()
 		vm.curProto.stack.Pop()
 		if key == nil {
-			panic("map key should not be nil") // TODO
+			vm.exit("map key should not be nil")
 		}
 		obj.Data[key] = val
 	}
@@ -453,22 +442,22 @@ func attrAssign(vm *VM, cb func(ori, val interface{}) interface{}) {
 	if arr, ok := obj.(*types.Array); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
-			panic("array index should be integer") // TODO
+			vm.exit("array index should be integer")
 		}
 		if idx > int64(len(arr.Data)) {
-			panic("index out of range")
+			vm.exit("index out of range")
 		}
 		arr.Data[idx] = cb(arr.Data[idx], val)
 		return
 	}
 	if obj, ok := obj.(*types.Object); ok {
 		if key == nil {
-			panic("map key should not be nil")
+			vm.exit("map key should not be nil")
 		}
 		obj.Data[key] = cb(obj.Data[key], val)
 		return
 	}
-	panic(fmt.Sprintf("do not support attr assign for %T", obj))
+	vm.exit("do not support attr assign for %T", obj)
 
 }
 
@@ -479,10 +468,10 @@ func actionAttrAccess(vm *VM) {
 	if arr, ok := obj.(*types.Array); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
-			panic("array index should be integer") // TODO
+			vm.exit("array index should be integer")
 		}
 		if idx > int64(len(arr.Data)) {
-			panic("index out of range")
+			vm.exit("index out of range")
 		}
 		vm.curProto.stack.Replace(arr.Data[idx])
 		return
@@ -490,23 +479,22 @@ func actionAttrAccess(vm *VM) {
 	if str, ok := obj.(string); ok {
 		var idx int64
 		if idx, ok = key.(int64); !ok {
-			panic("array index should be integer") // TODO
+			vm.exit("array index should be integer")
 		}
 		if idx > int64(len(str)) {
-			panic("index out of range")
+			vm.exit("index out of range")
 		}
 		vm.curProto.stack.Replace(int64(str[idx]))
 		return
 	}
 	if obj, ok := obj.(*types.Object); ok {
 		if key == nil {
-			panic("map key should not be nil")
+			vm.exit("map key should not be nil")
 		}
 		vm.curProto.stack.Replace(obj.Data[key])
 		return
 	}
-	// TODO
-	panic(fmt.Sprintf("do not support attr access for %T", obj))
+	vm.exit("do not support attr access for %T", obj)
 }
 
 func actionJumpRel(vm *VM) {
@@ -600,6 +588,7 @@ func callFunc(closure *types.Closure, vm *VM, argCnt uint32, wantRtnCnt int) {
 }
 
 func callBuiltin(_func *builtinFunc, vm *VM, argCnt uint32, wantRtnCnt int) {
+	vm.curCallingBuiltin = _func.name
 	realRtnCnt := _func.handler(int(argCnt), vm)
 	if vm.builtinFuncFailed {
 		vm.builtinFuncFailed = false
@@ -622,7 +611,7 @@ func call(_func interface{}, vm *VM, argCnt uint32, wantRtnCnt int) {
 	case *builtinFunc:
 		callBuiltin(_func, vm, argCnt, wantRtnCnt)
 	default:
-		panic("") // TODO
+		vm.exit("top of stack is not a function, but a %s", getType(_func))
 	}
 }
 
@@ -815,7 +804,7 @@ func binaryAction(v1, v2 interface{}, intOP func(a, b int64) interface{},
 			result = stringOP(strconv.Itoa(int(v1)), v)
 			break
 		}
-		panic("") // TODO
+		exit("Interger <OP> %s is not allowed", getType(v2))
 	case float64:
 		if v, ok := v2.(int64); ok {
 			result = floatOP(v1, float64(v))
@@ -833,7 +822,7 @@ func binaryAction(v1, v2 interface{}, intOP func(a, b int64) interface{},
 			result = stringOP(fmt.Sprintf("%f", v1), v)
 			break
 		}
-		panic("") // TODO
+		exit("Float <OP> %s is not allowed", getType(v2))
 	case bool:
 		if v, ok := v2.(int64); ok {
 			result = intOP(boolToInt(v1), v)
@@ -851,6 +840,7 @@ func binaryAction(v1, v2 interface{}, intOP func(a, b int64) interface{},
 			result = boolOP(v1, true)
 			break
 		}
+		exit("bool <OP> %s is not allowed", getType(v2))
 	case string:
 		if v, ok := v2.(int64); ok {
 			result = stringOP(v1, strconv.Itoa(int(v)))
@@ -868,8 +858,9 @@ func binaryAction(v1, v2 interface{}, intOP func(a, b int64) interface{},
 			result = stringOP(v1, v)
 			break
 		}
+		exit("string <OP> %s is not allowed", getType(v2))
 	default:
-		panic("")
+		exit("%s <OP> %s is not allowed", getType(v1), getType(v2))
 	}
 
 	if v, ok := result.(float64); ok {
