@@ -2,7 +2,7 @@ package parser
 
 import (
 	"gscript/complier/ast"
-	. "gscript/complier/lexer"
+	"gscript/complier/token"
 )
 
 /*
@@ -37,19 +37,19 @@ factor ::= '(' exp ')' | literal | nil | new ID ['(' [expList] ')']
 
 // '(' [explist] ')
 func parseExpListBlock(p *Parser) []ast.Exp {
-	p.l.NextTokenKind(TOKEN_SEP_LPAREN)
-	if p.l.Expect(TOKEN_SEP_RPAREN) {
+	p.NextTokenKind(token.TOKEN_SEP_LPAREN)
+	if p.Expect(token.TOKEN_SEP_RPAREN) {
 		p.l.NextToken()
 		return nil
 	}
 	exps := parseExpList(p)
-	p.l.NextTokenKind(TOKEN_SEP_RPAREN)
+	p.NextTokenKind(token.TOKEN_SEP_RPAREN)
 	return exps
 }
 
 func parseExpList(p *Parser) (exps []ast.Exp) {
 	exps = append(exps, parseExp(p))
-	for p.l.Expect(TOKEN_SEP_COMMA) {
+	for p.Expect(token.TOKEN_SEP_COMMA) {
 		p.l.NextToken()
 		exps = append(exps, parseExp(p))
 	}
@@ -62,64 +62,68 @@ func parseExp(p *Parser) ast.Exp {
 
 func parseTerm12(p *Parser) ast.Exp {
 	exp1 := parseTerm11(p)
-	if !p.l.Expect(TOKEN_SEP_QMARK) { // ?
+	if !p.Expect(token.TOKEN_SEP_QMARK) { // ?
 		return exp1
 	}
 	p.l.NextToken()
 	exp2 := parseTerm11(p)
-	p.l.NextTokenKind(TOKEN_SEP_COLON) // :
-	return &ast.TernaryOpExp{exp1, exp2, parseTerm11(p)}
+	p.NextTokenKind(token.TOKEN_SEP_COLON) // :
+	return &ast.TernaryOpExp{
+		Exp1: exp1,
+		Exp2: exp2,
+		Exp3: parseTerm11(p),
+	}
 }
 
 func parseTerm11(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_LOR}, parseTerm10)
+	return _parseBinExp(p, []int{token.TOKEN_OP_LOR}, parseTerm10)
 }
 
 func parseTerm10(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_LAND}, parseTerm9)
+	return _parseBinExp(p, []int{token.TOKEN_OP_LAND}, parseTerm9)
 }
 
 func parseTerm9(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_OR}, parseTerm8)
+	return _parseBinExp(p, []int{token.TOKEN_OP_OR}, parseTerm8)
 }
 
 func parseTerm8(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_XOR}, parseTerm7)
+	return _parseBinExp(p, []int{token.TOKEN_OP_XOR}, parseTerm7)
 }
 
 func parseTerm7(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_AND}, parseTerm6)
+	return _parseBinExp(p, []int{token.TOKEN_OP_AND}, parseTerm6)
 }
 
 func parseTerm6(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_EQ, TOKEN_OP_NE}, parseTerm5)
+	return _parseBinExp(p, []int{token.TOKEN_OP_EQ, token.TOKEN_OP_NE}, parseTerm5)
 }
 
 func parseTerm5(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_LE, TOKEN_OP_GE, TOKEN_OP_LT, TOKEN_OP_GT}, parseTerm4)
+	return _parseBinExp(p, []int{token.TOKEN_OP_LE, token.TOKEN_OP_GE, token.TOKEN_OP_LT, token.TOKEN_OP_GT}, parseTerm4)
 }
 
 func parseTerm4(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_SHL, TOKEN_OP_SHR}, parseTerm3)
+	return _parseBinExp(p, []int{token.TOKEN_OP_SHL, token.TOKEN_OP_SHR}, parseTerm3)
 }
 
 func parseTerm3(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_ADD, TOKEN_OP_SUB}, parseTerm2)
+	return _parseBinExp(p, []int{token.TOKEN_OP_ADD, token.TOKEN_OP_SUB}, parseTerm2)
 }
 
 func parseTerm2(p *Parser) ast.Exp {
-	return _parseBinExp(p, []int{TOKEN_OP_DIV, TOKEN_OP_MUL, TOKEN_OP_MOD, TOKEN_OP_IDIV}, parseTerm1)
+	return _parseBinExp(p, []int{token.TOKEN_OP_DIV, token.TOKEN_OP_MUL, token.TOKEN_OP_MOD, token.TOKEN_OP_IDIV}, parseTerm1)
 }
 
 func parseTerm1(p *Parser) ast.Exp {
 	kind := p.l.LookAhead().Kind
 
 	var unOp int
-	if kind == TOKEN_OP_SUB {
+	if kind == token.TOKEN_OP_SUB {
 		unOp = ast.UNOP_NEG
-	} else if kind == TOKEN_OP_NOT {
+	} else if kind == token.TOKEN_OP_NOT {
 		unOp = ast.UNOP_NOT
-	} else if kind == TOKEN_OP_LNOT {
+	} else if kind == token.TOKEN_OP_LNOT {
 		unOp = ast.UNOP_LNOT
 	} else {
 		return parseTerm0(p)
@@ -129,20 +133,20 @@ func parseTerm1(p *Parser) ast.Exp {
 }
 
 func parseTerm0(p *Parser) ast.Exp {
-	if p.l.Expect(TOKEN_OP_INC) {
+	if p.Expect(token.TOKEN_OP_INC) {
 		p.l.NextToken()
-		return &ast.UnOpExp{ast.UNOP_INC, parseFactor(p)}
-	} else if p.l.Expect(TOKEN_OP_DEC) {
+		return &ast.UnOpExp{Op: ast.UNOP_INC, Exp: parseFactor(p)}
+	} else if p.Expect(token.TOKEN_OP_DEC) {
 		p.l.NextToken()
-		return &ast.UnOpExp{ast.UNOP_DEC, parseFactor(p)}
+		return &ast.UnOpExp{Op: ast.UNOP_DEC, Exp: parseFactor(p)}
 	}
 	exp := parseFactor(p)
-	if p.l.Expect(TOKEN_OP_INC) {
+	if p.Expect(token.TOKEN_OP_INC) {
 		p.l.NextToken()
-		return &ast.UnOpExp{ast.UNOP_INC_, exp}
-	} else if p.l.Expect(TOKEN_OP_DEC) {
+		return &ast.UnOpExp{Op: ast.UNOP_INC_, Exp: exp}
+	} else if p.Expect(token.TOKEN_OP_DEC) {
 		p.l.NextToken()
-		return &ast.UnOpExp{ast.UNOP_DEC_, exp}
+		return &ast.UnOpExp{Op: ast.UNOP_DEC_, Exp: exp}
 	}
 	return exp
 }
@@ -150,40 +154,41 @@ func parseTerm0(p *Parser) ast.Exp {
 // factor ::= '(' exp ')' | literal | nil | new ID ['(' [expList] ')']
 // 		 | ID { ( '.' ID | '[' exp ']' | '(' [expList] ')' ) }
 func parseFactor(p *Parser) ast.Exp {
-	switch p.l.LookAhead().Kind {
-	case TOKEN_STRING:
+	switch ahead := p.l.LookAhead(); ahead.Kind {
+	case token.TOKEN_STRING:
 		return parseStringLiteralExp(p)
-	case TOKEN_NUMBER:
+	case token.TOKEN_NUMBER:
 		return parseNumberLiteralExp(p)
-	case TOKEN_SEP_LCURLY: // mapLiteral
+	case token.TOKEN_SEP_LCURLY: // mapLiteral
 		return parseMapLiteralExp(p)
-	case TOKEN_SEP_LBRACK: // arrLiteral
+	case token.TOKEN_SEP_LBRACK: // arrLiteral
 		return parseArrLiteralExp(p)
-	case TOKEN_KW_TRUE:
+	case token.TOKEN_KW_TRUE:
 		return parseTrueExp(p)
-	case TOKEN_KW_FALSE:
+	case token.TOKEN_KW_FALSE:
 		return parseFalseExp(p)
-	case TOKEN_KW_NIL:
+	case token.TOKEN_KW_NIL:
 		return parseNilExp(p)
-	case TOKEN_KW_FUNC:
+	case token.TOKEN_KW_FUNC:
 		return parseFuncLiteralExp(p)
-	case TOKEN_KW_NEW:
+	case token.TOKEN_KW_NEW:
 		return parseNewObjectExp(p)
-	case TOKEN_IDENTIFIER:
+	case token.TOKEN_IDENTIFIER:
 		return parseFuncCallOrAttrExp(p)
-	case TOKEN_SEP_LPAREN: // (exp)
+	case token.TOKEN_SEP_LPAREN: // (exp)
 		p.l.NextToken()
 		exp := parseExp(p)
-		p.l.NextTokenKind(TOKEN_SEP_RPAREN)
+		p.NextTokenKind(token.TOKEN_SEP_RPAREN)
 		return exp
 	default:
-		panic(p.l.Line())
+		p.exit("unexpected token '%s' for parsing factor", ahead.Content)
 	}
+	return nil
 }
 
 func parseFuncLiteralExp(p *Parser) *ast.FuncLiteralExp {
 	p.l.NextToken()
-	return &ast.FuncLiteralExp{p.parseFuncLiteral()}
+	return &ast.FuncLiteralExp{FuncLiteral: p.parseFuncLiteral()}
 }
 
 func parseNilExp(p *Parser) *ast.NilExp {
@@ -202,35 +207,37 @@ func parseTrueExp(p *Parser) *ast.TrueExp {
 }
 
 func parseNumberLiteralExp(p *Parser) *ast.NumberLiteralExp {
-	return &ast.NumberLiteralExp{p.l.NextToken().Value}
+	return &ast.NumberLiteralExp{Value: p.l.NextToken().Value}
 }
 
 func parseStringLiteralExp(p *Parser) *ast.StringLiteralExp {
-	return &ast.StringLiteralExp{p.l.NextToken().Value.(string)}
+	return &ast.StringLiteralExp{Value: p.l.NextToken().Value.(string)}
 }
 
 func parseFuncCallOrAttrExp(p *Parser) ast.Exp {
 	var exp ast.Exp
-	exp = &ast.NameExp{p.l.NextToken().Content}
+	exp = &ast.NameExp{Name: p.l.NextToken().Content}
 	for {
 		switch p.l.LookAhead().Kind {
-		case TOKEN_SEP_DOT: // access attribute
+		case token.TOKEN_SEP_DOT: // access attribute
 			p.l.NextToken()
 			exp = &ast.BinOpExp{
-				Exp1:  exp,
-				Exp2:  &ast.StringLiteralExp{p.l.NextTokenKind(TOKEN_IDENTIFIER).Content},
+				Exp1: exp,
+				Exp2: &ast.StringLiteralExp{
+					Value: p.NextTokenKind(token.TOKEN_IDENTIFIER).Content,
+				},
 				BinOp: ast.BINOP_ATTR,
 			}
-		case TOKEN_SEP_LBRACK: // access map
+		case token.TOKEN_SEP_LBRACK: // access map
 			p.l.NextToken()
 			exp = &ast.BinOpExp{
 				Exp1:  exp,
 				Exp2:  parseExp(p),
 				BinOp: ast.BINOP_ATTR,
 			}
-			p.l.NextTokenKind(TOKEN_SEP_RBRACK)
-		case TOKEN_SEP_LPAREN: // function call
-			exp = &ast.FuncCallExp{exp, parseExpListBlock(p)}
+			p.NextTokenKind(token.TOKEN_SEP_RBRACK)
+		case token.TOKEN_SEP_LPAREN: // function call
+			exp = &ast.FuncCallExp{Func: exp, Args: parseExpListBlock(p)}
 		default:
 			return exp
 		}
@@ -240,8 +247,8 @@ func parseFuncCallOrAttrExp(p *Parser) ast.Exp {
 func parseNewObjectExp(p *Parser) *ast.NewObjectExp {
 	p.l.NextToken()
 	exp := &ast.NewObjectExp{}
-	exp.Name = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
-	if !p.l.Expect(TOKEN_SEP_LPAREN) {
+	exp.Name = p.NextTokenKind(token.TOKEN_IDENTIFIER).Content
+	if !p.Expect(token.TOKEN_SEP_LPAREN) {
 		return exp
 	}
 	exp.Args = parseExpListBlock(p)
@@ -251,13 +258,13 @@ func parseNewObjectExp(p *Parser) *ast.NewObjectExp {
 func parseArrLiteralExp(p *Parser) *ast.ArrLiteralExp {
 	p.l.NextToken()
 	exp := &ast.ArrLiteralExp{}
-	for !p.l.Expect(TOKEN_SEP_RBRACK) {
+	for !p.Expect(token.TOKEN_SEP_RBRACK) {
 		exp.Vals = append(exp.Vals, parseExp(p))
-		if p.l.Expect(TOKEN_SEP_COMMA) || p.l.Expect(TOKEN_SEP_SEMI) {
+		if p.Expect(token.TOKEN_SEP_COMMA) || p.Expect(token.TOKEN_SEP_SEMI) {
 			p.l.NextToken()
 		}
 	}
-	p.l.NextTokenKind(TOKEN_SEP_RBRACK)
+	p.NextTokenKind(token.TOKEN_SEP_RBRACK)
 	return exp
 }
 
@@ -268,13 +275,13 @@ loop:
 	for {
 		var key interface{}
 		switch p.l.LookAhead().Kind {
-		case TOKEN_KW_TRUE:
+		case token.TOKEN_KW_TRUE:
 			key = true
-		case TOKEN_KW_FALSE:
+		case token.TOKEN_KW_FALSE:
 			key = false
-		case TOKEN_STRING, TOKEN_NUMBER:
+		case token.TOKEN_STRING, token.TOKEN_NUMBER:
 			key = p.l.LookAhead().Value
-		case TOKEN_IDENTIFIER:
+		case token.TOKEN_IDENTIFIER:
 			key = p.l.LookAhead().Content
 		default:
 			break loop
@@ -283,16 +290,16 @@ loop:
 		exp.Keys = append(exp.Keys, key)
 
 		var val ast.Exp
-		p.l.NextTokenKind(TOKEN_SEP_COLON)
+		p.NextTokenKind(token.TOKEN_SEP_COLON)
 		val = parseExp(p)
 		exp.Vals = append(exp.Vals, val)
-		if p.l.Expect(TOKEN_SEP_COMMA) || p.l.Expect(TOKEN_SEP_SEMI) {
+		if p.Expect(token.TOKEN_SEP_COMMA) || p.Expect(token.TOKEN_SEP_SEMI) {
 			p.l.NextToken()
-		} else if !p.l.Expect(TOKEN_SEP_RCURLY) {
-			panic(p.l.Line())
+		} else if !p.Expect(token.TOKEN_SEP_RCURLY) {
+			p.exit("expect '}', but got %s", p.l.NextToken().Content)
 		}
 	}
-	p.l.NextTokenKind(TOKEN_SEP_RCURLY)
+	p.NextTokenKind(token.TOKEN_SEP_RCURLY)
 	return exp
 }
 
@@ -301,7 +308,7 @@ func _parseBinExp(p *Parser, expect []int, cb func(*Parser) ast.Exp) ast.Exp {
 	for {
 		flag := func() bool {
 			for _, kind := range expect {
-				if p.l.Expect(kind) {
+				if p.Expect(kind) {
 					return true
 				}
 			}

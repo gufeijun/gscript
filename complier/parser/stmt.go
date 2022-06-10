@@ -2,92 +2,89 @@ package parser
 
 import (
 	"gscript/complier/ast"
-	. "gscript/complier/lexer"
+	"gscript/complier/token"
 )
 
 func (p *Parser) parseStmt(atTop bool) ast.Stmt {
 	var stmt ast.Stmt
-	switch p.l.LookAhead().Kind {
-	case TOKEN_KW_CONST, TOKEN_KW_LET:
+	ahead := p.l.LookAhead()
+	switch ahead.Kind {
+	case token.TOKEN_KW_LET:
 		stmt = p.parseVarDeclStmt()
-	case TOKEN_IDENTIFIER:
+	case token.TOKEN_IDENTIFIER:
 		stmt = p.parseVarOpOrLabel()
-	case TOKEN_KW_FUNC:
+	case token.TOKEN_KW_FUNC:
 		stmt = p.parseFunc()
 		if !atTop {
 			if _stmt, ok := stmt.(*ast.FuncDefStmt); ok {
 				stmt = toVarDeclStmt(_stmt)
 			}
 		}
-	case TOKEN_KW_BREAK:
+	case token.TOKEN_KW_BREAK:
 		stmt = p.parseBreakStmt()
-	case TOKEN_KW_CONTINUE:
+	case token.TOKEN_KW_CONTINUE:
 		stmt = p.parseContinueStmt()
-	case TOKEN_KW_RETURN:
+	case token.TOKEN_KW_RETURN:
 		stmt = p.parseReturnStmt()
-	case TOKEN_KW_GOTO:
+	case token.TOKEN_KW_GOTO:
 		stmt = p.parseGotoStmt()
-	case TOKEN_KW_FALLTHROUGH:
+	case token.TOKEN_KW_FALLTHROUGH:
 		stmt = p.parseFallthroughStmt()
-	case TOKEN_KW_LOOP:
+	case token.TOKEN_KW_LOOP:
 		stmt = p.parseLoopStmt()
-	case TOKEN_KW_WHILE:
+	case token.TOKEN_KW_WHILE:
 		stmt = p.parseWhileStmt()
-	case TOKEN_KW_FOR:
+	case token.TOKEN_KW_FOR:
 		stmt = p.parseForStmt()
-	case TOKEN_KW_IF:
+	case token.TOKEN_KW_IF:
 		stmt = p.parseIfStmt()
-	case TOKEN_KW_CLASS:
+	case token.TOKEN_KW_CLASS:
 		stmt = p.parseClassStmt()
-	case TOKEN_KW_ENUM:
+	case token.TOKEN_KW_ENUM:
 		stmt = p.parseEnumStmt()
-	case TOKEN_KW_SWITCH:
+	case token.TOKEN_KW_SWITCH:
 		stmt = p.parseSwitchStmt()
-	case TOKEN_OP_INC, TOKEN_OP_DEC:
+	case token.TOKEN_OP_INC, token.TOKEN_OP_DEC:
 		stmt = p.parseIncOrDecVar()
-	case TOKEN_KW_TRY:
+	case token.TOKEN_KW_TRY:
 		stmt = p.parseTryCatchStmt()
 	default:
-		panic(p.l.Line())
+		p.exit("unexpected token '%s' to make a statement", ahead.Content)
 	}
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	return stmt
 }
 
 func (p *Parser) parseTryCatchStmt() (stmt *ast.TryCatchStmt) {
 	stmt = new(ast.TryCatchStmt)
 	p.l.NextToken()
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	stmt.TryBlocks = p.parseBlock().Blocks
-	p.l.NextTokenKind(TOKEN_KW_CATCH)
-	if p.l.ConsumeIf(TOKEN_SEP_LPAREN) {
-		if p.l.Expect(TOKEN_IDENTIFIER) {
+	p.NextTokenKind(token.TOKEN_KW_CATCH)
+	if p.ConsumeIf(token.TOKEN_SEP_LPAREN) {
+		if p.Expect(token.TOKEN_IDENTIFIER) {
 			stmt.CatchValue = p.l.NextToken().Content
 		}
-		p.l.NextTokenKind(TOKEN_SEP_RPAREN)
+		p.NextTokenKind(token.TOKEN_SEP_RPAREN)
 	}
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	stmt.CatchBlocks = p.parseBlock().Blocks
 	return stmt
 }
 
 func toVarDeclStmt(stmt *ast.FuncDefStmt) ast.Stmt {
 	varDecl := new(ast.VarDeclStmt)
-	varDecl.Const = true
 	varDecl.Lefts = []string{stmt.Name}
 	varDecl.Rights = []ast.Exp{&ast.FuncLiteralExp{FuncLiteral: stmt.FuncLiteral}}
 	return varDecl
 }
 
-// varDeclStmt ::= (const|let) id {,id} = exp {,exp} ;
+// varDeclStmt ::= let id {,id} = exp {,exp} ;
 func (p *Parser) parseVarDeclStmt() (stmt *ast.VarDeclStmt) {
 	stmt = new(ast.VarDeclStmt)
-	stmt.Const = p.l.NextToken().Kind == TOKEN_KW_CONST // const or let
-	stmt.Lefts = p.parseNameList()                      // id {,id}
-	if !p.l.Expect(TOKEN_OP_ASSIGN) {
-		if stmt.Const {
-			panic("const variable should have initial value") // TODO
-		}
+	p.l.NextToken()
+	stmt.Lefts = p.parseNameList() // id {,id}
+	if !p.Expect(token.TOKEN_OP_ASSIGN) {
 		stmt.Rights = make([]ast.Exp, len(stmt.Lefts))
 		for i := range stmt.Rights {
 			stmt.Rights[i] = &ast.NilExp{}
@@ -97,7 +94,7 @@ func (p *Parser) parseVarDeclStmt() (stmt *ast.VarDeclStmt) {
 	p.l.NextToken()
 	stmt.Rights = parseExpList(p) // exp {,exp}
 	if len(stmt.Lefts) < len(stmt.Rights) {
-		panic("") // TODO
+		stmt.Rights = stmt.Rights[:len(stmt.Lefts)]
 	}
 	return
 }
@@ -108,16 +105,16 @@ func (p *Parser) parseVarDeclStmt() (stmt *ast.VarDeclStmt) {
 //          | ID ':'							# case4: label
 func (p *Parser) parseVarOpOrLabel() ast.Stmt {
 	name := p.l.NextToken().Content
-	if p.l.ConsumeIf(TOKEN_SEP_COLON) { // case4
+	if p.ConsumeIf(token.TOKEN_SEP_COLON) { // case4
 		label := &ast.LabelStmt{Name: name}
 		return label
 	}
 	v := p._parseVar(name)
 	switch p.l.LookAhead().Kind {
-	case TOKEN_OP_INC, TOKEN_OP_DEC: // case2
+	case token.TOKEN_OP_INC, token.TOKEN_OP_DEC: // case2
 		stmt := _incOrDec2Assign(p.l.NextToken().Kind, v)
 		return stmt
-	case TOKEN_SEP_LPAREN: // case3
+	case token.TOKEN_SEP_LPAREN: // case3
 		stmt := new(ast.NamedFuncCallStmt)
 		stmt.Prefix = v.Prefix
 		stmt.CallTails = append(stmt.CallTails, ast.CallTail{
@@ -135,17 +132,18 @@ func (p *Parser) parseVarOpOrLabel() ast.Stmt {
 func (p *Parser) _parseAssignStmt(v ast.Var) *ast.VarAssignStmt {
 	var stmt ast.VarAssignStmt
 	stmt.Lefts = append(stmt.Lefts, v)
-	for p.l.ConsumeIf(TOKEN_SEP_COMMA) {
+	for p.ConsumeIf(token.TOKEN_SEP_COMMA) {
 		stmt.Lefts = append(stmt.Lefts, p.parseVar())
 	}
 	token := p.l.NextToken()
 	if !_isAsignOp(token.Kind) {
-		panic(p.l.Line())
+		p.exit("expect assign operation for assign statement, but got '%s'", token.Content)
 	}
 	stmt.AssignOp = token.Kind
 	stmt.Rights = parseExpList(p)
-	if len(stmt.Lefts) < len(stmt.Rights) {
-		panic("") // TODO
+	if len(stmt.Lefts) != len(stmt.Rights) {
+		p.exit("expression count(%d) on the right of operator '%s' is not equal to variable count(%d) on the left",
+			len(stmt.Rights), token.Content, len(stmt.Lefts))
 	}
 	return &stmt
 }
@@ -153,7 +151,7 @@ func (p *Parser) _parseAssignStmt(v ast.Var) *ast.VarAssignStmt {
 // i++ i-- ==> i+=1 i-=1
 func _incOrDec2Assign(kind int, v ast.Var) (stmt *ast.VarAssignStmt) {
 	op := ast.ASIGN_OP_SUBEQ
-	if kind == TOKEN_OP_INC {
+	if kind == token.TOKEN_OP_INC {
 		op = ast.ASIGN_OP_ADDEQ
 	}
 	return &ast.VarAssignStmt{
@@ -175,24 +173,21 @@ func (p *Parser) _parseVar(prefix string) (v ast.Var) {
 }
 
 func (p *Parser) parseVar() (v ast.Var) {
-	if !p.l.Expect(TOKEN_IDENTIFIER) {
-		panic(p.l.Line())
-	}
-	return p._parseVar(p.l.NextToken().Content)
+	return p._parseVar(p.NextTokenKind(token.TOKEN_IDENTIFIER).Content)
 }
 
 func (p *Parser) parseAttrTail() (exps []ast.Exp) {
 	for {
 		switch p.l.LookAhead().Kind {
-		case TOKEN_SEP_DOT:
+		case token.TOKEN_SEP_DOT:
 			p.l.NextToken()
 			// a.b ==> a["b"]
-			token := p.l.NextTokenKind(TOKEN_IDENTIFIER)
+			token := p.NextTokenKind(token.TOKEN_IDENTIFIER)
 			exps = append(exps, &ast.StringLiteralExp{Value: token.Content})
-		case TOKEN_SEP_LBRACK: //[
+		case token.TOKEN_SEP_LBRACK: //[
 			p.l.NextToken()
 			exps = append(exps, parseExp(p))
-			p.l.NextTokenKind(TOKEN_SEP_RBRACK)
+			p.NextTokenKind(token.TOKEN_SEP_RBRACK)
 		default:
 			return
 		}
@@ -203,48 +198,46 @@ func (p *Parser) parseSwitchStmt() (stmt *ast.SwitchStmt) {
 	stmt = new(ast.SwitchStmt)
 	p.l.NextToken()                // switch
 	stmt.Value = p.parseExpBlock() // (condition)
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
-	p.l.NextTokenKind(TOKEN_SEP_LCURLY) // {
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
+	p.NextTokenKind(token.TOKEN_SEP_LCURLY) // {
 
-	for p.l.ConsumeIf(TOKEN_KW_CASE) {
+	for p.ConsumeIf(token.TOKEN_KW_CASE) {
 		stmt.Cases = append(stmt.Cases, parseExpList(p))
-		p.l.NextTokenKind(TOKEN_SEP_COLON) // :
+		p.NextTokenKind(token.TOKEN_SEP_COLON) // :
 		stmt.Blocks = append(stmt.Blocks, p.parseBlockStmts(false))
 	}
 
-	if p.l.ConsumeIf(TOKEN_KW_DEFAULT) { // default
-		p.l.NextTokenKind(TOKEN_SEP_COLON)
+	if p.ConsumeIf(token.TOKEN_KW_DEFAULT) { // default
+		p.NextTokenKind(token.TOKEN_SEP_COLON)
 		stmt.Default = p.parseBlockStmts(false)
 	}
-	p.l.NextTokenKind(TOKEN_SEP_RCURLY) // }
+	p.NextTokenKind(token.TOKEN_SEP_RCURLY) // }
 	return
 }
 
 func (p *Parser) parseEnumStmt() (stmt *ast.EnumStmt) {
 	stmt = new(ast.EnumStmt)
 	p.l.NextToken()
-	p.l.NextTokenKind(TOKEN_SEP_LCURLY)
+	p.NextTokenKind(token.TOKEN_SEP_LCURLY)
 	var enum int64
 	var ok bool
 	for {
-		if p.l.ConsumeIf(TOKEN_SEP_RCURLY) {
+		if p.ConsumeIf(token.TOKEN_SEP_RCURLY) {
 			break
 		}
-		if !p.l.Expect(TOKEN_IDENTIFIER) {
-			panic(p.l.Line())
-		}
-		stmt.Names = append(stmt.Names, p.l.NextToken().Content)
-		if p.l.ConsumeIf(TOKEN_OP_ASSIGN) {
-			if enum, ok = p.l.NextToken().Value.(int64); !ok {
-				panic(p.l.Line())
+		stmt.Names = append(stmt.Names, p.NextTokenKind(token.TOKEN_IDENTIFIER).Content)
+		if p.ConsumeIf(token.TOKEN_OP_ASSIGN) {
+			t := p.l.NextToken()
+			if enum, ok = t.Value.(int64); !ok {
+				p.exit("expect enum value after '=', but got '%s'", t.Content)
 			}
 		}
 		stmt.Values = append(stmt.Values, enum)
 		enum++
-		if p.l.ConsumeIf(TOKEN_SEP_RCURLY) {
+		if p.ConsumeIf(token.TOKEN_SEP_RCURLY) {
 			break
 		}
-		if p.l.Expect(TOKEN_SEP_COMMA) || p.l.Expect(TOKEN_SEP_SEMI) {
+		if p.Expect(token.TOKEN_SEP_COMMA) || p.Expect(token.TOKEN_SEP_SEMI) {
 			p.l.NextToken()
 		}
 	}
@@ -255,34 +248,34 @@ func (p *Parser) parseEnumStmt() (stmt *ast.EnumStmt) {
 func (p *Parser) parseClassStmt() (stmt *ast.ClassStmt) {
 	stmt = new(ast.ClassStmt)
 	p.l.NextToken()
-	stmt.Name = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
-	p.l.NextTokenKind(TOKEN_SEP_LCURLY)
+	stmt.Name = p.NextTokenKind(token.TOKEN_IDENTIFIER).Content
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
+	p.NextTokenKind(token.TOKEN_SEP_LCURLY)
 
-	for p.l.Expect(TOKEN_IDENTIFIER) {
+	for p.Expect(token.TOKEN_IDENTIFIER) {
 		attr := p.l.NextToken().Content
 		var exp ast.Exp
-		if p.l.Expect(TOKEN_SEP_LPAREN) {
+		if p.Expect(token.TOKEN_SEP_LPAREN) {
 			exp = &ast.FuncLiteralExp{FuncLiteral: p.parseFuncLiteral()}
-		} else if p.l.ConsumeIf(TOKEN_OP_ASSIGN) {
+		} else if p.ConsumeIf(token.TOKEN_OP_ASSIGN) {
 			exp = parseExp(p)
 		}
 		if attr == "__self" {
 			_exp, ok := exp.(*ast.FuncLiteralExp)
 			if !ok {
-				panic("__self needs to be a function")
+				p.exit("__self of class '%s' should be a method", stmt.Name)
 			}
 			stmt.Constructor = _exp
 		} else if exp != nil {
 			stmt.AttrName = append(stmt.AttrName, attr)
 			stmt.AttrValue = append(stmt.AttrValue, exp)
 		}
-		if p.l.Expect(TOKEN_SEP_SEMI) || p.l.Expect(TOKEN_SEP_COMMA) {
+		if p.Expect(token.TOKEN_SEP_SEMI) || p.Expect(token.TOKEN_SEP_COMMA) {
 			p.l.NextToken()
 		}
 	}
 
-	p.l.NextTokenKind(TOKEN_SEP_RCURLY)
+	p.NextTokenKind(token.TOKEN_SEP_RCURLY)
 	p.ClassStmts = append(p.ClassStmts, stmt)
 	return
 }
@@ -290,7 +283,7 @@ func (p *Parser) parseClassStmt() (stmt *ast.ClassStmt) {
 // single stmt to block
 func (p *Parser) parseBlockStmt() (stmt ast.Block) {
 	switch p.l.LookAhead().Kind {
-	case TOKEN_SEP_LCURLY:
+	case token.TOKEN_SEP_LCURLY:
 		return p.parseBlock()
 	default:
 		stmt.Blocks = append(stmt.Blocks, p.parseStmt(false))
@@ -302,17 +295,17 @@ func (p *Parser) parseIfStmt() (stmt *ast.IfStmt) {
 	stmt = new(ast.IfStmt)
 	p.l.NextToken() // if
 	stmt.Conditions = append(stmt.Conditions, p.parseExpBlock())
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	stmt.Blocks = append(stmt.Blocks, p.parseBlockStmt()) // block | stmt
 
-	for p.l.ConsumeIf(TOKEN_KW_ELIF) { // elif
+	for p.ConsumeIf(token.TOKEN_KW_ELIF) { // elif
 		stmt.Conditions = append(stmt.Conditions, p.parseExpBlock())
-		p.l.ConsumeIf(TOKEN_SEP_SEMI)
+		p.ConsumeIf(token.TOKEN_SEP_SEMI)
 		stmt.Blocks = append(stmt.Blocks, p.parseBlockStmt())
 	}
 
 	// else ==> elif(true)
-	if p.l.ConsumeIf(TOKEN_KW_ELSE) { // else
+	if p.ConsumeIf(token.TOKEN_KW_ELSE) { // else
 		stmt.Conditions = append(stmt.Conditions, &ast.TrueExp{})
 		stmt.Blocks = append(stmt.Blocks, p.parseBlockStmt())
 	}
@@ -322,14 +315,14 @@ func (p *Parser) parseIfStmt() (stmt *ast.IfStmt) {
 
 // (exp)
 func (p *Parser) parseExpBlock() (exp ast.Exp) {
-	p.l.NextTokenKind(TOKEN_SEP_LPAREN) // (
-	exp = parseExp(p)                   // condition
-	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
+	p.NextTokenKind(token.TOKEN_SEP_LPAREN) // (
+	exp = parseExp(p)                       // condition
+	p.NextTokenKind(token.TOKEN_SEP_RPAREN) // )
 	return
 }
 
 func _isAsignOp(kind int) bool {
-	return kind > TOKEN_ASIGN_START && kind < TOKEN_ASIGN_END
+	return kind > token.TOKEN_ASIGN_START && kind < token.TOKEN_ASIGN_END
 }
 
 func (p *Parser) parseVarAssignStmt(prefix string) (stmt *ast.VarAssignStmt) {
@@ -339,40 +332,41 @@ func (p *Parser) parseVarAssignStmt(prefix string) (stmt *ast.VarAssignStmt) {
 func (p *Parser) parseForStmt() (stmt *ast.ForStmt) {
 	stmt = new(ast.ForStmt)
 	p.l.NextToken()
-	p.l.NextTokenKind(TOKEN_SEP_LPAREN) // (
+	p.NextTokenKind(token.TOKEN_SEP_LPAREN) // (
 
-	switch p.l.LookAhead().Kind {
-	case TOKEN_KW_CONST, TOKEN_KW_LET:
+	ahead := p.l.LookAhead()
+	switch ahead.Kind {
+	case token.TOKEN_KW_LET:
 		stmt.DeclStmt = p.parseVarDeclStmt()
-	case TOKEN_IDENTIFIER:
+	case token.TOKEN_IDENTIFIER:
 		stmt.AsgnStmt = p.parseVarAssignStmt(p.l.NextToken().Content)
-	case TOKEN_SEP_SEMI:
+	case token.TOKEN_SEP_SEMI:
 		break
 	default:
-		panic(p.l.Line())
+		p.exit("unexpected token '%s' for ForStatement", ahead.Content)
 	}
 
-	p.l.NextTokenKind(TOKEN_SEP_SEMI) // ;
-	if !p.l.Expect(TOKEN_SEP_SEMI) {
+	p.NextTokenKind(token.TOKEN_SEP_SEMI) // ;
+	if !p.Expect(token.TOKEN_SEP_SEMI) {
 		stmt.Condition = parseExp(p)
 	}
-	p.l.NextTokenKind(TOKEN_SEP_SEMI) // ;
-	if !p.l.Expect(TOKEN_SEP_RPAREN) {
+	p.NextTokenKind(token.TOKEN_SEP_SEMI) // ;
+	if !p.Expect(token.TOKEN_SEP_RPAREN) {
 		stmt.ForTail = p.parseForTail()
 	}
-	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.NextTokenKind(token.TOKEN_SEP_RPAREN) // )
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	stmt.Block = p.parseBlockStmt()
 	return
 }
 
 // forTail ::= varAssign | varIncOrDec | incOrDecVar
 func (p *Parser) parseForTail() *ast.VarAssignStmt {
-	if p.l.Expect(TOKEN_OP_INC) || p.l.Expect(TOKEN_OP_DEC) { // incOrDecVar
+	if p.Expect(token.TOKEN_OP_INC) || p.Expect(token.TOKEN_OP_DEC) { // incOrDecVar
 		return p.parseIncOrDecVar()
 	}
 	v := p.parseVar()
-	if p.l.Expect(TOKEN_OP_INC) || p.l.Expect(TOKEN_OP_DEC) { // varIncOrDec
+	if p.Expect(token.TOKEN_OP_INC) || p.Expect(token.TOKEN_OP_DEC) { // varIncOrDec
 		return _incOrDec2Assign(p.l.NextToken().Kind, v)
 	}
 	return p._parseAssignStmt(v) // varAssign
@@ -380,23 +374,23 @@ func (p *Parser) parseForTail() *ast.VarAssignStmt {
 
 func (p *Parser) parseLoopStmt() (stmt *ast.LoopStmt) {
 	p.l.NextToken()
-	p.l.NextTokenKind(TOKEN_SEP_LPAREN)
-	p.l.NextTokenKind(TOKEN_KW_LET)
+	p.NextTokenKind(token.TOKEN_SEP_LPAREN)
+	p.NextTokenKind(token.TOKEN_KW_LET)
 
 	stmt = new(ast.LoopStmt)
-	firstName := p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
-	if p.l.ConsumeIf(TOKEN_SEP_COMMA) {
+	firstName := p.NextTokenKind(token.TOKEN_IDENTIFIER).Content
+	if p.ConsumeIf(token.TOKEN_SEP_COMMA) {
 		stmt.Key = firstName
-		stmt.Val = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
+		stmt.Val = p.NextTokenKind(token.TOKEN_IDENTIFIER).Content
 	} else {
 		stmt.Val = firstName
 	}
-	p.l.NextTokenKind(TOKEN_SEP_COLON) // :
+	p.NextTokenKind(token.TOKEN_SEP_COLON) // :
 
 	stmt.Iterator = parseExp(p)
 
-	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.NextTokenKind(token.TOKEN_SEP_RPAREN) // )
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 
 	stmt.Block = p.parseBlockStmt()
 
@@ -407,7 +401,7 @@ func (p *Parser) parseWhileStmt() (stmt *ast.WhileStmt) {
 	p.l.NextToken()
 	stmt = new(ast.WhileStmt)
 	stmt.Condition = p.parseExpBlock()
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	stmt.Block = p.parseBlockStmt()
 	return
 }
@@ -419,40 +413,36 @@ func (p *Parser) parseFallthroughStmt() (stmt *ast.FallthroughStmt) {
 
 func (p *Parser) parseGotoStmt() (stmt *ast.GotoStmt) {
 	p.l.NextToken()
-	if !p.l.Expect(TOKEN_IDENTIFIER) {
-		panic("")
-	}
-	stmt = &ast.GotoStmt{Label: p.l.NextToken().Content}
+	stmt = &ast.GotoStmt{Label: p.NextTokenKind(token.TOKEN_IDENTIFIER).Content}
 	return
 }
 
 func (p *Parser) parseNameList() (names []string) {
 	names = append(names, p.parseName())
-	for p.l.ConsumeIf(TOKEN_SEP_COMMA) {
+	for p.ConsumeIf(token.TOKEN_SEP_COMMA) {
 		names = append(names, p.parseName())
 	}
 	return names
 }
 
 func (p *Parser) parseName() string {
-	if !p.l.Expect(TOKEN_IDENTIFIER) {
-		panic(p.l.Line())
-	}
-	return p.l.NextToken().Content
+	return p.NextTokenKind(token.TOKEN_IDENTIFIER).Content
 }
 
 // stmt ::= func ID funcBody ';          			   	// function definition
 //	      | funcLiteral '(' [expList] ')' callTail ';'  // anonymous function call
 func (p *Parser) parseFunc() ast.Stmt {
 	p.l.NextToken() // func
-	switch p.l.LookAhead().Kind {
-	case TOKEN_IDENTIFIER:
+	ahead := p.l.LookAhead()
+	switch ahead.Kind {
+	case token.TOKEN_IDENTIFIER:
 		return p.parseFuncDefStmt()
-	case TOKEN_SEP_LPAREN:
+	case token.TOKEN_SEP_LPAREN:
 		return p.parseAnonymousFuncCallStmt()
 	default:
-		panic(p.l.Line())
+		p.exit("unexpexted token '%s' after keyword 'func' for function definition", ahead.Content)
 	}
+	return nil
 }
 
 func (p *Parser) parseFuncDefStmt() (stmt *ast.FuncDefStmt) {
@@ -465,48 +455,47 @@ func (p *Parser) parseFuncDefStmt() (stmt *ast.FuncDefStmt) {
 
 func (p *Parser) parseFuncLiteral() (literal ast.FuncLiteral) {
 	var defaultValue bool
-	p.l.NextTokenKind(TOKEN_SEP_LPAREN) // (
+	p.NextTokenKind(token.TOKEN_SEP_LPAREN) // (
 
 	literal.Parameters, defaultValue = p.parseParameters()
 
-	if p.l.ConsumeIf(TOKEN_SEP_VARARG) { // ...
+	if p.ConsumeIf(token.TOKEN_SEP_VARARG) { // ...
+		vaArgs := p.NextTokenKind(token.TOKEN_IDENTIFIER).Content
 		if defaultValue {
-			// TODO error
-			panic(p.l.Line())
+			p.exit("vaargs '%s' can not appear after parameter with default value", vaArgs)
 		}
-		literal.VaArgs = p.l.NextTokenKind(TOKEN_IDENTIFIER).Content
+		literal.VaArgs = vaArgs
 	}
-	p.l.NextTokenKind(TOKEN_SEP_RPAREN) // )
+	p.NextTokenKind(token.TOKEN_SEP_RPAREN) // )
 
 	literal.Block = p.parseBlock()
 	return
 }
 
 func (p *Parser) parseParameters() (pars []ast.Parameter, defaultValue bool) {
-	for p.l.Expect(TOKEN_IDENTIFIER) {
+	for p.Expect(token.TOKEN_IDENTIFIER) {
 		par := ast.Parameter{}
 		par.Name = p.l.NextToken().Content
-		if p.l.Expect(TOKEN_OP_ASSIGN) {
+		if p.Expect(token.TOKEN_OP_ASSIGN) {
 			defaultValue = true
 			p.l.NextToken()
-			switch token := p.l.NextToken(); token.Kind {
-			case TOKEN_KW_TRUE:
+			switch t := p.l.NextToken(); t.Kind {
+			case token.TOKEN_KW_TRUE:
 				par.Default = true
-			case TOKEN_KW_FALSE:
+			case token.TOKEN_KW_FALSE:
 				par.Default = false
-			case TOKEN_STRING, TOKEN_NUMBER:
-				par.Default = token.Value
-			case TOKEN_OP_SUB:
-				par.Default = -p.l.NextTokenKind(TOKEN_NUMBER).Value.(int64)
+			case token.TOKEN_STRING, token.TOKEN_NUMBER:
+				par.Default = t.Value
+			case token.TOKEN_OP_SUB:
+				par.Default = -p.NextTokenKind(token.TOKEN_NUMBER).Value.(int64)
 			default:
-				panic("invalid default value") // TODO
+				p.exit("invalid default value '%s' for parameter '%s'", t.Content, par.Name)
 			}
 		} else if defaultValue {
-			// TODO error
-			panic(p.l.Line())
+			p.exit("parameter '%s' without default value can not appear after those with default values", par.Name)
 		}
 		pars = append(pars, par)
-		if p.l.Expect(TOKEN_SEP_COMMA) {
+		if p.Expect(token.TOKEN_SEP_COMMA) {
 			p.l.NextToken()
 		}
 	}
@@ -522,8 +511,8 @@ func (p *Parser) parseAnonymousFuncCallStmt() (stmt *ast.AnonymousFuncCallStmt) 
 }
 
 // . or [ or (
-func expectTail(token *Token) bool {
-	return token.Kind == TOKEN_SEP_DOT || token.Kind == TOKEN_SEP_LBRACK || token.Kind == TOKEN_SEP_LPAREN
+func expectTail(t *token.Token) bool {
+	return t.Kind == token.TOKEN_SEP_DOT || t.Kind == token.TOKEN_SEP_LBRACK || t.Kind == token.TOKEN_SEP_LPAREN
 }
 
 func (p *Parser) parseCallTails() (tails []ast.CallTail) {
@@ -549,7 +538,7 @@ func (p *Parser) parseContinueStmt() (stmt *ast.ContinueStmt) {
 func (p *Parser) parseReturnStmt() (stmt *ast.ReturnStmt) {
 	stmt = new(ast.ReturnStmt)
 	p.l.NextToken()
-	if p.l.Expect(TOKEN_SEP_RCURLY) || p.l.Expect(TOKEN_SEP_SEMI) {
+	if p.Expect(token.TOKEN_SEP_RCURLY) || p.Expect(token.TOKEN_SEP_SEMI) {
 		return
 	}
 	stmt.Args = parseExpList(p)

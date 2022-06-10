@@ -2,7 +2,7 @@ package parser
 
 import (
 	"gscript/complier/ast"
-	. "gscript/complier/lexer"
+	"gscript/complier/token"
 )
 
 func (p *Parser) parseProgram() *ast.Program {
@@ -17,9 +17,9 @@ func (p *Parser) parseProgram() *ast.Program {
 func (p *Parser) parseImports() []ast.Import {
 	var imports []ast.Import
 
-	for p.l.Expect(TOKEN_KW_IMPORT) {
+	for p.Expect(token.TOKEN_KW_IMPORT) {
 		imports = append(imports, p.parseImport())
-		p.l.ConsumeIf(TOKEN_SEP_SEMI)
+		p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	}
 	return imports
 }
@@ -31,31 +31,31 @@ func (p *Parser) parseImport() (ipt ast.Import) {
 	for {
 		ahead := p.l.LookAhead()
 		stdLib := false
-		if ahead.Kind == TOKEN_IDENTIFIER {
+		if ahead.Kind == token.TOKEN_IDENTIFIER {
 			stdLib = true
-		} else if ahead.Kind != TOKEN_STRING {
-			panic(p.l.Line())
+		} else if ahead.Kind != token.TOKEN_STRING {
+			p.exit("expect path(string) after keyword \"import\"")
 		}
 		ipt.Libs = append(ipt.Libs, ast.Lib{
 			Stdlib: stdLib,
 			Path:   ahead.Value.(string),
 		})
 		p.l.NextToken()
-		if !p.l.Expect(TOKEN_SEP_COMMA) {
+		if !p.Expect(token.TOKEN_SEP_COMMA) {
 			break
 		}
 		p.l.NextToken()
 	}
-	if !p.l.Expect(TOKEN_KW_AS) {
+	if !p.Expect(token.TOKEN_KW_AS) {
 		return
 	}
 	p.l.NextToken()
 	for i := 0; ; i++ {
-		if !p.l.Expect(TOKEN_IDENTIFIER) {
-			panic(p.l.Line())
+		if !p.Expect(token.TOKEN_IDENTIFIER) {
+			p.exit("expect alias(identifier) for imported package '%s' after keyword 'as'", ipt.Libs[i].Path)
 		}
 		ipt.Libs[i].Alias = p.l.NextToken().Content
-		if !p.l.Expect(TOKEN_SEP_COMMA) {
+		if !p.Expect(token.TOKEN_SEP_COMMA) {
 			return
 		}
 		p.l.NextToken()
@@ -66,9 +66,9 @@ func (p *Parser) parseBlockStmts(atTop bool) []ast.BlockStmt {
 	var blockStmts []ast.BlockStmt
 	for {
 		switch p.l.LookAhead().Kind {
-		case TOKEN_SEP_LCURLY:
+		case token.TOKEN_SEP_LCURLY:
 			blockStmts = append(blockStmts, p.parseBlock())
-		case TOKEN_KW_EXPORT, TOKEN_EOF, TOKEN_KW_CASE, TOKEN_KW_DEFAULT, TOKEN_SEP_RCURLY:
+		case token.TOKEN_KW_EXPORT, token.TOKEN_EOF, token.TOKEN_KW_CASE, token.TOKEN_KW_DEFAULT, token.TOKEN_SEP_RCURLY:
 			return blockStmts
 		default:
 			blockStmts = append(blockStmts, p.parseStmt(atTop))
@@ -77,18 +77,18 @@ func (p *Parser) parseBlockStmts(atTop bool) []ast.BlockStmt {
 }
 
 func (p *Parser) parseBlock() (block ast.Block) {
-	p.l.NextTokenKind(TOKEN_SEP_LCURLY)
+	p.NextTokenKind(token.TOKEN_SEP_LCURLY)
 	block.Blocks = p.parseBlockStmts(false)
-	p.l.NextTokenKind(TOKEN_SEP_RCURLY)
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.NextTokenKind(token.TOKEN_SEP_RCURLY)
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	return block
 }
 
 func (p *Parser) parseExport() (ept ast.Export) {
-	if !p.l.ConsumeIf(TOKEN_KW_EXPORT) {
+	if !p.ConsumeIf(token.TOKEN_KW_EXPORT) {
 		return
 	}
 	ept.Exp = parseExp(p)
-	p.l.ConsumeIf(TOKEN_SEP_SEMI)
+	p.ConsumeIf(token.TOKEN_SEP_SEMI)
 	return
 }
