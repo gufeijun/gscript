@@ -317,7 +317,8 @@ func writeConst(w *bytes.Buffer, constant interface{}) {
 			w.WriteByte(typeFalse)
 		}
 	default:
-		panic("invalid constant type")
+		fmt.Printf("writing invalid constant type\n")
+		os.Exit(0)
 	}
 }
 
@@ -343,7 +344,7 @@ func readConst(r *bufio.Reader) (interface{}, error) {
 	case typeNil:
 		return nil, nil
 	default:
-		panic("invalid constant type")
+		return nil, fmt.Errorf("reading invalid constant type")
 	}
 }
 
