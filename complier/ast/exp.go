@@ -35,6 +35,7 @@ type NewObjectExp struct {
 }
 
 type NameExp struct {
+	Line int
 	Name string
 }
 

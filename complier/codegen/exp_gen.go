@@ -161,7 +161,7 @@ func genUnOpExp(exp *ast.UnOpExp, ctx *Context) {
 }
 
 func genNameExp(exp *ast.NameExp, ctx *Context) {
-	ctx.insLoadName(exp.Name)
+	ctx.insLoadName(exp.Name, exp.Line)
 }
 
 func genArrLiteralExp(exp *ast.ArrLiteralExp, ctx *Context) {

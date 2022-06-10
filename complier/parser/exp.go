@@ -216,7 +216,10 @@ func parseStringLiteralExp(p *Parser) *ast.StringLiteralExp {
 
 func parseFuncCallOrAttrExp(p *Parser) ast.Exp {
 	var exp ast.Exp
-	exp = &ast.NameExp{Name: p.l.NextToken().Content}
+	exp = &ast.NameExp{
+		Line: p.l.Line(),
+		Name: p.l.NextToken().Content,
+	}
 	for {
 		switch p.l.LookAhead().Kind {
 		case token.TOKEN_SEP_DOT: // access attribute

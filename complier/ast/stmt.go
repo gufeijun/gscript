@@ -18,6 +18,7 @@ type VarDeclStmt struct {
 // obj.total, i += 1,2
 // i++ ==> i += 1
 type VarAssignStmt struct {
+	Line     int
 	AssignOp int
 	Lefts    []Var
 	Rights   []Exp

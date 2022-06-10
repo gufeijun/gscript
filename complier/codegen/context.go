@@ -6,6 +6,7 @@ import (
 	"gscript/complier/ast"
 	"gscript/complier/parser"
 	"gscript/proto"
+	"os"
 )
 
 type Context struct {
@@ -241,7 +242,7 @@ func tryLoadUpValue(ctx *Context, name string) (upValueIdx uint32, ok bool) {
 	return 0, false
 }
 
-func (ctx *Context) insLoadName(name string) {
+func (ctx *Context) insLoadName(name string, line int) {
 	// ctx.frame.nt.nameTable
 
 	// name is a defined variable?
@@ -282,10 +283,11 @@ func (ctx *Context) insLoadName(name string) {
 		return
 	}
 
-	panic(fmt.Sprintf("undefined name %s", name)) // TODO
+	fmt.Printf("[%s:%d] undeclared name '%s'\n", curParsingFile, line, name)
+	os.Exit(0)
 }
 
-func (ctx *Context) insStoreName(name string) {
+func (ctx *Context) insStoreName(name string, line int) {
 	idx, ok := ctx.frame.nt.get(name)
 	if ok {
 		ctx.writeIns(proto.INS_STORE_NAME)
@@ -299,7 +301,8 @@ func (ctx *Context) insStoreName(name string) {
 		return
 	}
 
-	panic(fmt.Sprintf("name %s do not exist", name))
+	fmt.Printf("[%s:%d] undeclared name '%s'\n", curParsingFile, line, name)
+	os.Exit(0)
 }
 
 func (ctx *Context) enterBlock() {

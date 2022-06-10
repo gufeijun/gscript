@@ -133,6 +133,7 @@ func (p *Parser) parseVarOpOrLabel() ast.Stmt {
 // has parsed first var
 func (p *Parser) _parseAssignStmt(v ast.Var) *ast.VarAssignStmt {
 	var stmt ast.VarAssignStmt
+	stmt.Line = p.l.Line()
 	stmt.Lefts = append(stmt.Lefts, v)
 	for p.ConsumeIf(token.TOKEN_SEP_COMMA) {
 		stmt.Lefts = append(stmt.Lefts, p.parseVar())

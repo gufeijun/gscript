@@ -615,11 +615,11 @@ func genVarAssignStmt(stmt *ast.VarAssignStmt, ctx *Context) {
 				}
 				ctx.writeIns(byte(stmt.AssignOp-ast.ASIGN_OP_ASSIGN) + proto.INS_BINARY_START)
 			}
-			ctx.insStoreName(target.Prefix)
+			ctx.insStoreName(target.Prefix, stmt.Line)
 			continue
 		}
 		genExp(target.Attrs[len(target.Attrs)-1], ctx, 1)
-		ctx.insLoadName(target.Prefix)
+		ctx.insLoadName(target.Prefix, stmt.Line)
 		for i := 0; i < length-1; i++ {
 			genExp(target.Attrs[i], ctx, 1)
 			ctx.writeIns(proto.INS_BINARY_ATTR)
