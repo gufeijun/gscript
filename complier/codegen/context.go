@@ -313,9 +313,6 @@ func (ctx *Context) enterBlock() {
 
 func (ctx *Context) leaveBlock(size uint32, varDecl bool) {
 	nt := ctx.frame.nt
-	if nt.prev == nil {
-		panic("") // TODO
-	}
 	ctx.frame.nt = nt.prev
 	*ctx.frame.nt.nameIdx = size
 	if varDecl {

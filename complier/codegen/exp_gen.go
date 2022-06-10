@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gscript/complier/ast"
 	"gscript/proto"
+	"os"
 )
 
 func genExps(exps []ast.Exp, ctx *Context, wantCnt int) {
@@ -66,7 +67,8 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 		genFuncCallExp(exp, ctx, retCnt)
 		retCnt = 0
 	default:
-		panic(fmt.Sprintf("do not support exp: %v", exp))
+		fmt.Printf("[%s] unkown expression %v\n", curParsingFile, exp)
+		os.Exit(0)
 	}
 	for i := 0; i < retCnt; i++ {
 		ctx.insLoadNil()
@@ -209,21 +211,14 @@ func toAssignStmt(exp ast.Exp, op int, ctx *Context) {
 		return
 	}
 	var v ast.Var
-	be, ok := exp.(*ast.BinOpExp)
-	if !ok {
-		panic("") // TODO
-	}
+	be := exp.(*ast.BinOpExp)
 	for {
 		v.Attrs = append(v.Attrs, be.Exp2)
 		if e, ok := be.Exp1.(*ast.NameExp); ok {
 			v.Prefix = e.Name
 			break
 		}
-		if e, ok := be.Exp1.(*ast.BinOpExp); ok {
-			be = e
-			continue
-		}
-		panic("") // TODO
+		be = be.Exp1.(*ast.BinOpExp)
 	}
 	for i := 0; i < len(v.Attrs)/2-1; i++ {
 		mirror := len(v.Attrs) - i - 1

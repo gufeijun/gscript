@@ -138,8 +138,8 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 		case *ast.TryCatchStmt:
 			genTryCatchStmt(stmt, ctx)
 		case *ast.LoopStmt:
-			// TODO
-			panic("do not support loop statement for now")
+			fmt.Printf("[%s] do not support loop statement for now\n", curParsingFile)
+			os.Exit(0)
 		case *ast.LabelStmt:
 			ctx.frame.validLabels[stmt.Name] = label{
 				name:          stmt.Name,
@@ -153,7 +153,8 @@ func genBlockStmts(stmts []ast.BlockStmt, ctx *Context) (varDecl bool) {
 		case *ast.EnumStmt, *ast.ClassStmt:
 			continue
 		default:
-			panic(fmt.Sprintf("do not support stmt:%T", stmt))
+			fmt.Printf("[%s] invalid statment %v\n", curParsingFile, stmt)
+			os.Exit(0)
 		}
 	}
 	handleGoto(ctx, gotos)
@@ -446,8 +447,10 @@ func genSwitchStmt(stmt *ast.SwitchStmt, ctx *Context) {
 		ctx.setSteps(pos_ptrs[i], ctx.textSize())
 		genStmtsWithBlock(stmt.Default, ctx)
 	}
+	// unhandled fallthrough at last switch case
 	if sb._fallthrough != nil {
-		panic("invalid fallthrough") // TODO
+		fmt.Printf("[%s] fallthrough should not appear at last case of switch statement\n", curParsingFile)
+		os.Exit(0)
 	}
 	end := ctx.textSize()
 	for _, end_ptr := range end_ptrs {
