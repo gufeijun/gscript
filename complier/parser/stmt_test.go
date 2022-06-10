@@ -16,14 +16,14 @@ func TestVarDeclStmt(t *testing.T) {
 		`let a,b,c = true,1+2,"good";`,
 	}
 	wants := []*VarDeclStmt{
-		{false, []string{"a"}, []Exp{&BinOpExp{BINOP_ADD, &StringLiteralExp{"a"}, &StringLiteralExp{"b"}}}},
-		{false, []string{"a"}, []Exp{&NilExp{}}},
-		{true, []string{"a", "b"}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
-		{false, []string{"a", "b"}, []Exp{
+		{[]string{"a"}, []Exp{&BinOpExp{BINOP_ADD, &StringLiteralExp{"a"}, &StringLiteralExp{"b"}}}},
+		{[]string{"a"}, []Exp{&NilExp{}}},
+		{[]string{"a", "b"}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
+		{[]string{"a", "b"}, []Exp{
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(1)}},
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
 		}},
-		{false, []string{"a", "b", "c"}, []Exp{
+		{[]string{"a", "b", "c"}, []Exp{
 			&TrueExp{},
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
 			&StringLiteralExp{"good"},

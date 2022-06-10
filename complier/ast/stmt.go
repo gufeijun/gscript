@@ -9,7 +9,6 @@ type Var struct {
 
 // const|let a,b,c = 1, "hello", add(1,2)
 type VarDeclStmt struct {
-	Const  bool
 	Lefts  []string
 	Rights []Exp
 }
