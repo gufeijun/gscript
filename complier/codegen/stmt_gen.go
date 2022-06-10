@@ -622,7 +622,7 @@ func genStmtsWithBlock(stmts []ast.BlockStmt, ctx *Context) {
 func genEnumStmt(stmts []*ast.EnumStmt, ctx *Context) {
 	for _, stmt := range stmts {
 		for i := range stmt.Names {
-			ctx.ct.saveEnum(stmt.Names[i], stmt.Values[i])
+			ctx.ct.saveEnum(stmt.Names[i], stmt.Lines[i], stmt.Values[i])
 		}
 	}
 }

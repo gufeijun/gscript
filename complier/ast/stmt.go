@@ -109,6 +109,7 @@ type ClassStmt struct {
 
 type EnumStmt struct {
 	Names  []string
+	Lines  []int
 	Values []int64
 }
 

@@ -225,6 +225,7 @@ func (p *Parser) parseEnumStmt() (stmt *ast.EnumStmt) {
 		if p.ConsumeIf(token.TOKEN_SEP_RCURLY) {
 			break
 		}
+		stmt.Lines = append(stmt.Lines, p.l.Line())
 		stmt.Names = append(stmt.Names, p.NextTokenKind(token.TOKEN_IDENTIFIER).Content)
 		if p.ConsumeIf(token.TOKEN_OP_ASSIGN) {
 			t := p.l.NextToken()

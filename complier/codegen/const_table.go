@@ -1,31 +1,43 @@
 package codegen
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 type ConstTable struct {
 	Constants []interface{}
 	ConsMap   map[interface{}]uint32 // constant -> constants index
-	enums     map[string]uint32      // enum -> constants index
+	enums     map[string]enum        // enum -> constants index
+}
+
+type enum struct {
+	idx  uint32
+	line uint32
 }
 
 func newConstTable() *ConstTable {
 	return &ConstTable{
 		ConsMap: make(map[interface{}]uint32),
-		enums:   make(map[string]uint32),
+		enums:   make(map[string]enum),
 	}
 }
 
-func (ct *ConstTable) saveEnum(enum string, num int64) {
-	if _, ok := ct.enums[enum]; ok {
-		panic(fmt.Sprintf("enum %s is already exists", enum))
+func (ct *ConstTable) saveEnum(name string, line int, num int64) {
+	if exists, ok := ct.enums[name]; ok {
+		fmt.Printf("enum name %s already defines at line %d, but redeclares at line %d", name, exists.line, line)
+		os.Exit(0)
 	}
-	ct.enums[enum] = uint32(len(ct.Constants))
+	ct.enums[name] = enum{
+		idx:  uint32(len(ct.Constants)),
+		line: uint32(line),
+	}
 	ct.Constants = append(ct.Constants, num)
 }
 
-func (ct *ConstTable) getEnum(enum string) (idx uint32, ok bool) {
-	idx, ok = ct.enums[enum]
-	return
+func (ct *ConstTable) getEnum(name string) (idx uint32, ok bool) {
+	enum, ok := ct.enums[name]
+	return enum.idx, ok
 }
 
 func (ct *ConstTable) Get(key interface{}) uint32 {

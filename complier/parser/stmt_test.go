@@ -280,15 +280,13 @@ enum {
 `,
 	}
 	wants := []*EnumStmt{
-		{nil, nil},
-		{
-			[]string{"a", "b", "c", "d", "e", "f", "g"},
-			[]int64{1, 2, 8, 9, 10, 19, 20},
-		},
+		{Names: nil, Lines: nil, Values: nil},
+		{Names: []string{"a", "b", "c", "d", "e", "f", "g"}, Lines: nil, Values: []int64{1, 2, 8, 9, 10, 19, 20}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
 		stmt := NewParser(l).parseEnumStmt()
+		stmt.Lines = nil
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseEnumStmt failed: \n%s\n", src)
 		}
