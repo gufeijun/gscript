@@ -82,7 +82,6 @@ const (
 	TOKEN_KW_NEW         // new
 	TOKEN_KW_NIL         // nil
 	TOKEN_KW_CLASS       // class
-	TOKEN_KW_CONST       // const
 	TOKEN_KW_ENUM        // enum
 	TOKEN_KW_LOOP        // loop
 	TOKEN_KW_IMPORT      // import
@@ -125,7 +124,6 @@ var Keywords = map[string]int{
 	"new":         TOKEN_KW_NEW,
 	"nil":         TOKEN_KW_NIL,
 	"class":       TOKEN_KW_CLASS,
-	"const":       TOKEN_KW_CONST,
 	"enum":        TOKEN_KW_ENUM,
 	"loop":        TOKEN_KW_LOOP,
 	"import":      TOKEN_KW_IMPORT,
