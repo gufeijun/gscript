@@ -10,6 +10,7 @@ type Program struct {
 
 // import net,http as n,h
 type Import struct {
+	Line int
 	Libs []Lib
 }
 

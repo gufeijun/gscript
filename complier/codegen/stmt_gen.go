@@ -14,6 +14,7 @@ func SetStdLibGenMode() {
 }
 
 type Import struct {
+	Line        uint32
 	ProtoNumber uint32
 	Alias       string
 	StdLib      bool
@@ -61,7 +62,7 @@ func genImports(imports []Import, ctx *Context) {
 		} else {
 			ctx.insLoadProto(_import.ProtoNumber)
 		}
-		ctx.insPushName(_import.Alias)
+		ctx.insPushName(_import.Alias, _import.Line)
 	}
 }
 
@@ -167,7 +168,7 @@ func genTryCatchStmt(stmt *ast.TryCatchStmt, ctx *Context) {
 	ctx.enterBlock()
 	size := *ctx.frame.nt.nameIdx
 	if stmt.CatchValue != "" {
-		ctx.insPushName(stmt.CatchValue)
+		ctx.insPushName(stmt.CatchValue, uint32(stmt.CatchLine))
 		genBlockStmts(stmt.CatchBlocks, ctx)
 		ctx.leaveBlock(size, true)
 	} else {
@@ -186,10 +187,10 @@ func genFuncDefStmt(stmt *ast.FuncDefStmt, ctx *Context) {
 
 func collectArgs(literal *ast.FuncLiteral, ctx *Context) {
 	if literal.VaArgs != "" {
-		ctx.insPushName(literal.VaArgs)
+		ctx.insPushName(literal.VaArgs, uint32(literal.Line))
 	}
 	for i := len(literal.Parameters) - 1; i >= 0; i-- {
-		ctx.insPushName(literal.Parameters[i].Name)
+		ctx.insPushName(literal.Parameters[i].Name, uint32(literal.Line))
 	}
 }
 
@@ -572,7 +573,7 @@ func genIfStmt(stmt *ast.IfStmt, ctx *Context) {
 func genVarDeclStmt(stmt *ast.VarDeclStmt, ctx *Context) {
 	genExps(stmt.Rights, ctx, len(stmt.Lefts))
 	for i := len(stmt.Lefts) - 1; i >= 0; i-- {
-		ctx.insPushName(stmt.Lefts[i])
+		ctx.insPushName(stmt.Lefts[i], uint32(stmt.Line))
 	}
 }
 

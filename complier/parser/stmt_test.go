@@ -16,14 +16,14 @@ func TestVarDeclStmt(t *testing.T) {
 		`let a,b,c = true,1+2,"good";`,
 	}
 	wants := []*VarDeclStmt{
-		{[]string{"a"}, []Exp{&BinOpExp{BINOP_ADD, &StringLiteralExp{"a"}, &StringLiteralExp{"b"}}}},
-		{[]string{"a"}, []Exp{&NilExp{}}},
-		{[]string{"a", "b"}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
-		{[]string{"a", "b"}, []Exp{
+		{0, []string{"a"}, []Exp{&BinOpExp{BINOP_ADD, &StringLiteralExp{"a"}, &StringLiteralExp{"b"}}}},
+		{0, []string{"a"}, []Exp{&NilExp{}}},
+		{0, []string{"a", "b"}, []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}},
+		{0, []string{"a", "b"}, []Exp{
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(1)}},
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
 		}},
-		{[]string{"a", "b", "c"}, []Exp{
+		{0, []string{"a", "b", "c"}, []Exp{
 			&TrueExp{},
 			&BinOpExp{BINOP_ADD, &NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}},
 			&StringLiteralExp{"good"},
@@ -32,6 +32,7 @@ func TestVarDeclStmt(t *testing.T) {
 	for i, src := range srcs {
 		l := newLexer(src)
 		stmt := NewParser(l).parseVarDeclStmt()
+		stmt.Line = 0
 		if !reflect.DeepEqual(stmt, wants[i]) {
 			t.Fatalf("parseVarDeclStmt failed: \n%s\n", src)
 		}
@@ -138,42 +139,27 @@ func TestFuncCallStmt(t *testing.T) {
 
 func TestFuncDefStmt(t *testing.T) {
 	srcs := []string{
-		`
-func A(a,b=1){
-	let a=b
-	print(a)
-}
-`,
-		`
-func A(a,...vararg){}
-`,
-		`
-func A(a=1,b="good"){
-	return a,b
-}
-`,
+		`func A(a,b=1){}`,
+		`func A(a,...vararg){}`,
+		`func A(a=1,b="good"){}`,
 	}
 	wants := []*FuncDefStmt{
-		{"A", FuncLiteral{
+		{Name: "A", FuncLiteral: FuncLiteral{
+			Line:       1,
 			Parameters: []Parameter{{"a", nil}, {"b", int64(1)}},
 			VaArgs:     "",
-			Block: Block{Blocks: []BlockStmt{
-				NewParser(newLexer("let a=b;")).parseVarDeclStmt(),
-				NewParser(newLexer("print(a)")).parseVarOpOrLabel(),
-			}},
+			Block:      Block{},
 		}},
-		{"A", FuncLiteral{
+		{Name: "A", FuncLiteral: FuncLiteral{
+			Line:       1,
 			Parameters: []Parameter{{"a", nil}},
 			VaArgs:     "vararg",
 		}},
-		{"A", FuncLiteral{
+		{Name: "A", FuncLiteral: FuncLiteral{
+			Line:       1,
 			Parameters: []Parameter{{"a", int64(1)}, {"b", "good"}},
 			VaArgs:     "",
-			Block: Block{Blocks: []BlockStmt{
-				&ReturnStmt{
-					Args: []Exp{&NameExp{"a"}, &NameExp{"b"}},
-				},
-			}},
+			Block:      Block{},
 		}},
 	}
 	for i, src := range srcs {
@@ -187,51 +173,36 @@ func A(a=1,b="good"){
 
 func TestAnonymousFuncCall(t *testing.T) {
 	srcs := []string{
-		`
-func(a,b){return a+b;}(1,2)
- `,
-		`
-func(num){
-	return {
-		show:func(){
-			print(num)
-		}
-	}
-}(1).show()
-`,
-		`
-func(num){
-	return {show:func(){print(num)}}
-}(1)[echo("show")]()
-`,
+		`func(a,b){}(1,2)`,
+		`func(num){}(1).show()`,
+		`func(num){}(1)[echo("show")]()`,
 	}
 	wants := []*AnonymousFuncCallStmt{
-		&AnonymousFuncCallStmt{
+		{
 			FuncLiteral: FuncLiteral{
+				Line:       1,
 				Parameters: []Parameter{{"a", nil}, {"b", nil}},
-				Block: Block{Blocks: []BlockStmt{&ReturnStmt{
-					Args: []Exp{&BinOpExp{BINOP_ADD, &NameExp{"a"}, &NameExp{"b"}}}}}}},
+				Block:      Block{},
+			},
 			CallTails: []CallTail{{Args: []Exp{&NumberLiteralExp{int64(1)}, &NumberLiteralExp{int64(2)}}}},
 		},
-		&AnonymousFuncCallStmt{
+		{
 			FuncLiteral: FuncLiteral{
+				Line:       1,
 				Parameters: []Parameter{{"num", nil}},
-				Block: Block{[]BlockStmt{&ReturnStmt{Args: []Exp{&MapLiteralExp{
-					Keys: []interface{}{"show"},
-					Vals: []Exp{parseFuncLiteralExp(NewParser(newLexer("func(){print(num)}")))},
-				}}}}}},
+				Block:      Block{},
+			},
 			CallTails: []CallTail{
 				{nil, []Exp{&NumberLiteralExp{int64(1)}}},
 				{[]Exp{&StringLiteralExp{"show"}}, nil},
 			},
 		},
-		&AnonymousFuncCallStmt{
+		{
 			FuncLiteral: FuncLiteral{
+				Line:       1,
 				Parameters: []Parameter{{"num", nil}},
-				Block: Block{[]BlockStmt{&ReturnStmt{[]Exp{&MapLiteralExp{
-					Keys: []interface{}{"show"},
-					Vals: []Exp{parseFuncLiteralExp(NewParser(newLexer("func(){print(num)}")))},
-				}}}}}},
+				Block:      Block{},
+			},
 			CallTails: []CallTail{
 				{nil, []Exp{&NumberLiteralExp{int64(1)}}},
 				{[]Exp{parseFuncCallOrAttrExp(NewParser(newLexer(`echo("show")`)))}, nil}},
@@ -301,7 +272,6 @@ switch(a)
 {
 case 1:
 	i++
-	let b,c = 1,2
 case 2,3:
 	i--
 	call(a,b)
@@ -323,7 +293,7 @@ default:
 			Value: &NameExp{"a"},
 			Cases: [][]Exp{{&NumberLiteralExp{int64(1)}}, {&NumberLiteralExp{int64(2)}, &NumberLiteralExp{int64(3)}}},
 			Blocks: [][]BlockStmt{
-				{NewParser(newLexer("i++")).parseVarOpOrLabel(), NewParser(newLexer("let b,c = 1,2")).parseVarDeclStmt()},
+				{NewParser(newLexer("i++")).parseVarOpOrLabel()},
 				{NewParser(newLexer("i--")).parseVarOpOrLabel(), NewParser(newLexer("call(a,b)")).parseVarOpOrLabel()},
 			},
 		},
@@ -383,7 +353,6 @@ func TestWhileStmt(t *testing.T) {
 	srcs := []string{
 		`
 while(1){
-	let conn = accept(listener)
 	thread(handleConn,conn)
 }
 `,
@@ -396,7 +365,6 @@ while(i--)
 	wants := []*WhileStmt{
 		{&NumberLiteralExp{int64(1)}, Block{
 			[]BlockStmt{
-				NewParser(newLexer("let conn = accept(listener)")).parseVarDeclStmt(),
 				NewParser(newLexer("thread(handleConn,conn)")).parseVarOpOrLabel(),
 			},
 		}},
@@ -414,7 +382,7 @@ while(i--)
 func TestForStmt(t *testing.T) {
 	srcs := []string{
 		`
-for(let low,high=0,len(arr)-1;low<high;low,high = low+1,high-1){
+for(low,high=0,len(arr)-1;low<high;low,high = low+1,high-1){
 	arr[low],arr[high]=arr[high],arr[low]
 }
 `,
@@ -424,7 +392,7 @@ for(i=0;i<10;i++)
 `,
 	}
 	wants := []*ForStmt{
-		{nil, NewParser(newLexer("let low,high=0,len(arr)-1")).parseVarDeclStmt(),
+		{NewParser(newLexer("low,high=0,len(arr)-1")).parseVarOpOrLabel().(*VarAssignStmt), nil,
 			parseExp(NewParser(newLexer("low<high"))),
 			NewParser(newLexer("low,high = low+1,high-1")).parseVarOpOrLabel().(*VarAssignStmt),
 			Block{[]BlockStmt{NewParser(newLexer("arr[low],arr[high]=arr[high],arr[low]")).parseVarOpOrLabel()}},
@@ -521,9 +489,7 @@ func TestClassStmt(t *testing.T) {
 		`class A{}`,
 		`
 class A{
-	__self(){
-		this.age = 10;
-	}
+	__self(){}
 	name="jack"
 	age
 	show = func(){
@@ -533,8 +499,8 @@ class A{
 	}
 	wants := []*ClassStmt{
 		{"A", nil, nil, nil},
-		{"A", []string{"name", "show"}, []Exp{&StringLiteralExp{"jack"}, &FuncLiteralExp{FuncLiteral{nil, "", Block{}}}},
-			&FuncLiteralExp{FuncLiteral{nil, "", Block{[]BlockStmt{NewParser(newLexer("this.age = 10")).parseVarOpOrLabel()}}}}},
+		{"A", []string{"name", "show"}, []Exp{&StringLiteralExp{"jack"}, &FuncLiteralExp{FuncLiteral{6, nil, "", Block{}}}},
+			&FuncLiteralExp{FuncLiteral{3, nil, "", Block{}}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)
@@ -556,8 +522,8 @@ catch(e)
 `,
 	}
 	wants := []*TryCatchStmt{
-		{nil, "", nil},
-		{nil, "e", nil},
+		{nil, "", 0, nil},
+		{nil, "e", 4, nil},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)

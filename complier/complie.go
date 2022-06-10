@@ -70,6 +70,7 @@ func complie(code []byte, n *node, graph *graph) error {
 				alias = path.Base(lib.Path)
 			}
 			imports = append(imports, codegen.Import{
+				Line:        uint32(_import.Line),
 				ProtoNumber: protoNumber,
 				Alias:       alias,
 				StdLib:      lib.Stdlib,

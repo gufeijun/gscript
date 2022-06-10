@@ -63,6 +63,7 @@ func (p *Parser) parseTryCatchStmt() (stmt *ast.TryCatchStmt) {
 	p.NextTokenKind(token.TOKEN_KW_CATCH)
 	if p.ConsumeIf(token.TOKEN_SEP_LPAREN) {
 		if p.Expect(token.TOKEN_IDENTIFIER) {
+			stmt.CatchLine = p.l.Line()
 			stmt.CatchValue = p.l.NextToken().Content
 		}
 		p.NextTokenKind(token.TOKEN_SEP_RPAREN)
@@ -83,6 +84,7 @@ func toVarDeclStmt(stmt *ast.FuncDefStmt) ast.Stmt {
 func (p *Parser) parseVarDeclStmt() (stmt *ast.VarDeclStmt) {
 	stmt = new(ast.VarDeclStmt)
 	p.l.NextToken()
+	stmt.Line = p.l.Line()
 	stmt.Lefts = p.parseNameList() // id {,id}
 	if !p.Expect(token.TOKEN_OP_ASSIGN) {
 		stmt.Rights = make([]ast.Exp, len(stmt.Lefts))
@@ -335,8 +337,7 @@ func (p *Parser) parseForStmt() (stmt *ast.ForStmt) {
 	p.l.NextToken()
 	p.NextTokenKind(token.TOKEN_SEP_LPAREN) // (
 
-	ahead := p.l.LookAhead()
-	switch ahead.Kind {
+	switch ahead := p.l.LookAhead(); ahead.Kind {
 	case token.TOKEN_KW_LET:
 		stmt.DeclStmt = p.parseVarDeclStmt()
 	case token.TOKEN_IDENTIFIER:
@@ -458,6 +459,7 @@ func (p *Parser) parseFuncLiteral() (literal ast.FuncLiteral) {
 	var defaultValue bool
 	p.NextTokenKind(token.TOKEN_SEP_LPAREN) // (
 
+	literal.Line = p.l.Line()
 	literal.Parameters, defaultValue = p.parseParameters()
 
 	if p.ConsumeIf(token.TOKEN_SEP_VARARG) { // ...

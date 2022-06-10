@@ -29,6 +29,7 @@ func (p *Parser) parseImports() []ast.Import {
 func (p *Parser) parseImport() (ipt ast.Import) {
 	p.l.NextToken()
 	for {
+		ipt.Line = p.l.Line()
 		ahead := p.l.LookAhead()
 		stdLib := false
 		if ahead.Kind == token.TOKEN_IDENTIFIER {

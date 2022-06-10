@@ -7,8 +7,9 @@ type Var struct {
 	Attrs  []Exp
 }
 
-// const|let a,b,c = 1, "hello", add(1,2)
+// let a,b,c = 1, "hello", add(1,2)
 type VarDeclStmt struct {
+	Line   int
 	Lefts  []string
 	Rights []Exp
 }
@@ -45,8 +46,8 @@ type FuncDefStmt struct {
 	FuncLiteral
 }
 
-// TODO return
 type FuncLiteral struct {
+	Line       int
 	Parameters []Parameter
 	VaArgs     string
 	Block      Block
@@ -127,5 +128,6 @@ type ReturnStmt struct {
 type TryCatchStmt struct {
 	TryBlocks   []BlockStmt
 	CatchValue  string
+	CatchLine   int
 	CatchBlocks []BlockStmt
 }

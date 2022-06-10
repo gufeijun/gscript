@@ -18,8 +18,8 @@ import "../crawler",socks as craw,s`,
 	}
 	wants := [][]Import{
 		nil,
-		[]Import{{[]Lib{{true, "net", ""}, {true, "http", ""}}}, {[]Lib{{true, "system", "sys"}}}},
-		[]Import{{[]Lib{{false, "../sum", ""}}}, {[]Lib{{false, "../crawler", "craw"}, {true, "socks", "s"}}}},
+		[]Import{{2, []Lib{{true, "net", ""}, {true, "http", ""}}}, {3, []Lib{{true, "system", "sys"}}}},
+		[]Import{{2, []Lib{{false, "../sum", ""}}}, {3, []Lib{{false, "../crawler", "craw"}, {true, "socks", "s"}}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)

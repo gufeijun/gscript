@@ -73,12 +73,12 @@ func (ctx *Context) writeByte(v byte) {
 
 func (ctx *Context) insCopyName(name string) {
 	ctx.writeIns(proto.INS_COPY_STACK_TOP)
-	ctx.frame.nt.Set(name)
+	ctx.frame.nt.Set(name, 0)
 }
 
-func (ctx *Context) insPushName(name string) {
+func (ctx *Context) insPushName(name string, line uint32) {
 	ctx.writeIns(proto.INS_PUSH_NAME)
-	ctx.frame.nt.Set(name)
+	ctx.frame.nt.Set(name, line)
 }
 
 func (ctx *Context) insCall(wantRtnCnt byte, argCnt byte) {
@@ -217,8 +217,8 @@ func (ctx *Context) insStoreUpValue(idx uint32) {
 
 func searchFrame(frame *StackFrame, name string) (uint32, bool) {
 	for nt := frame.nt; nt != nil; nt = nt.prev {
-		if idx, ok := nt.nameTable[name]; ok {
-			return idx, true
+		if v, ok := nt.nameTable[name]; ok {
+			return v.idx, true
 		}
 	}
 	return 0, false
