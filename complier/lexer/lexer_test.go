@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	. "gscript/complier/token"
 	"math/rand"
 	"strings"
 	"testing"
@@ -22,7 +23,7 @@ func Test_IDENTIFIER_Token(t *testing.T) {
 					tl.newToken(TOKEN_IDENTIFIER, content, content)
 				}
 			}
-			for kw, kind := range keywords {
+			for kw, kind := range Keywords {
 				for roll, m := rand.Int()%3+1, 0; m < roll; m++ {
 					tl.newToken(kind, kw, kw)
 				}
@@ -187,7 +188,7 @@ func match(tokens []*Token, l *Lexer, t *testing.T) {
 func tokenValue(token *Token) string {
 	var tokenVal string
 	if token.Kind == TOKEN_EOF {
-		tokenVal = fmt.Sprintf("<EOF,->")
+		tokenVal = "<EOF,->"
 	} else if token.Kind >= TOKEN_SEP_DOT && token.Kind <= TOKEN_OP_SHR {
 		tokenVal = fmt.Sprintf("<%s,->", token.Content)
 	} else if token.Kind == TOKEN_IDENTIFIER {
