@@ -1,4 +1,4 @@
-package lexer
+package token
 
 // token kind
 const (
@@ -95,7 +95,7 @@ const (
 )
 
 var _eofToken = Token{Kind: TOKEN_EOF}
-var eofToken = &_eofToken
+var EOFToken = &_eofToken
 
 type Token struct {
 	Kind    int         // token kind
@@ -105,7 +105,7 @@ type Token struct {
 	Value   interface{} // token value, string literal, number literal or identifier
 }
 
-var keywords = map[string]int{
+var Keywords = map[string]int{
 	"break":       TOKEN_KW_BREAK,
 	"continue":    TOKEN_KW_CONTINUE,
 	"for":         TOKEN_KW_FOR,
