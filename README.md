@@ -2,7 +2,7 @@
 
 English|[中文](https://github.com/gufeijun/gscript/blob/master/README_zh.md)
 
-**Gscript is a small, dynamic script language written in Go**.
+**Gscript is a light, dynamic script language written in Go**.
 
 example:
 
