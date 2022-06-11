@@ -427,7 +427,7 @@ func foo() {
     let i = 0;
     # return a closure
     return func(){		
-        return ++i;		# capture value outside of scope
+        return ++i;		# capture value outside of the scope
     }
 }
 
@@ -441,9 +441,9 @@ print(f())				# output: 2
 
 `gscript` allows function arguments to have default values. If the function is called without the argument, the argument gets its default value.
 
-```
+```python
 func foo(name="jack",age=10) {
-	print(namea,age)
+	print(name,age)
 }
 
 foo()			# output: jack 10
