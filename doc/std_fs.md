@@ -51,9 +51,6 @@ method:
 
 + `isDir() exception => Boolean`: if the file is directory.
 
-+  `readDir(n:Integer) exception => Array<class stat>`:  reads the contents of the directory associated with the file f and returns a slice of DirEntry values in directory order. Subsequent calls on the same file will yield later DirEntry records in the directory.
-
++ `readDir(n:Integer) exception => Array<class stat>`:  reads the contents of the directory associated with the file f and returns a slice of DirEntry values in directory order. Subsequent calls on the same file will yield later DirEntry records in the directory.
   + If n > 0, ReadDir returns at most n DirEntry records. In this case, if ReadDir returns an empty slice, it will return an error explaining why. At the end of a directory, the error is io.EOF.
-
   + If n <= 0, ReadDir returns all the DirEntry records remaining in the directory.
-
