@@ -576,7 +576,7 @@ func callFunc(closure *types.Closure, vm *VM, argCnt uint32, wantRtnCnt int) {
 			vm.curProto.stack.Pop()
 			argCnt--
 		}
-		vm.curProto.stack.Push(&arr)
+		vm.curProto.stack.Push(types.NewArray(arr))
 	} else {
 		// pop out extra arguments
 		for argCnt > parCnt {
