@@ -156,11 +156,12 @@ we demonstrated the command `run` of `gsc` above. You can use `gsc --help` for m
   		17		STOP
   ```
 
-+ use `gsc run <source file>` or `gsc run <bytecode file>` to run then script.
++ use `gsc run <source file>` or `gsc run <bytecode file>` to run the script.
 
 ### References
 
 + [Language Syntax](https://github.com/gufeijun/gscript/blob/master/doc/syntax.md)
 + [Builtin Functions](https://github.com/gufeijun/gscript/blob/master/doc/builtin.md)
 + [Standard Library](https://github.com/gufeijun/gscript/blob/master/doc/std.md)
++ [BNF](https://github.com/gufeijun/gscript/blob/master/doc/bnf.txt)
 
