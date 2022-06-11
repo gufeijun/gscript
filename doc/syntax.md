@@ -5,14 +5,14 @@
 Following are most frequently used types in gscript:
 
 ```python
-100						# Number
+100					# Number
 100.21					# Number
 "gscript"				# String
 false					# Boolean
 [1,"gs",{}]				# Array
-{foo: 1, bar:"bar"}		# Objet
+{foo: 1, bar:"bar"}			# Objet
 func(){}				# Closure
-nil						# nil
+nil					# nil
 ```
 
 **Array**
@@ -21,7 +21,7 @@ nil						# nil
 let arr = [1,2,[1,2,3]]
 arr[0]					# 1
 arr[2][2]				# 3
-arr[3]					# will panic
+arr[3]					# out of range, will panic
 ```
 
 **Object**
@@ -43,25 +43,25 @@ obj.bar.arr				# [1,2,nil]
 
 ### Variables and Scopes
 
-Use  keyword `let` to define a new local variable. Using undefined variable will make compile failed: 
+Use  keyword `let` to define a new local variable. Using undefined variable will make compile fail: 
 
 ```python
 let a = 1
 
 # enter a new scope
 {
-    print(a)			# a==1
+    print(a)				# a==1
     let a = 2
     let b = 3
-    print(a)			# a==2
-    print(b)			# b==3
+    print(a)				# a==2
+    print(b)				# b==3
 }
 
 print(a)				# a==1
 print(b)				# invalid, complie will not pass
 ```
 
-Every variable can only be used in a scope, using a variable outside the scope will make compile failed, too.  
+Using a variable outside the scope will make compile fail, too.  
 
 Like many other script language, a variable can be assigned to a new value of different type. 
 
@@ -70,7 +70,7 @@ let a = {}
 a = []					# ok
 ```
 
-We can define multiple variables using one `let`:
+We can declare multiple variables using one `let`:
 
 ```python
 let a, b = 1, "hello"	# a=1,b="hello"
@@ -97,9 +97,7 @@ a, b = 1, 2
 |   `--`   |  `--x` or `x--`  |         Number         |
 |   `++`   |  `++x` or `x++`  |         Number         |
 
-Be careful to use `--` and `++`.
-
-If these two operators are used as a statement:
+Be careful to use `--` and `++`. If these two operators are used as statements:
 
 ```python
 # x++ is the same as ++x
@@ -112,7 +110,7 @@ x--			# x==1
 --x			# x==0
 ```
 
-But if these two operators are used as a expression:
+But if these two operators are used as expressions:
 
 ```python
 let x = 0
@@ -136,7 +134,7 @@ The behaviors of `--` and `++` are the same as language `JavaScript` and `C`.
 |   `//`   | integer divide |     Number     |
 |   `%`    |      mod       |    Integer     |
 |   `&`    |  bitwise AND   |    Integer     |
-|   `|`    |   bitwise OR   |    Integer     |
+|   `\|`    |   bitwise OR   |    Integer     |
 |   `^`    |  bitwise XOR   |    Integer     |
 |   `>>`   |  shrift right  |    Integer     |
 |   `<<`   |  shrift left   |    Integer     |
@@ -147,7 +145,7 @@ The behaviors of `--` and `++` are the same as language `JavaScript` and `C`.
 |   `==`   |       EQ       | String, Number |
 |   `!=`   |       NE       | String, Number |
 |   `&&`   |  logical AND   |      all       |
-|   `||`   |   logical OR   |      all       |
+|   `\|\|`   |   logical OR   |      all       |
 |   `[]`   | `object[key]`  |     Object     |
 
 *note: output type of  (number +  string) will be a string.*
@@ -172,7 +170,7 @@ print(result)		# 1
 |   `%=`   | `lhs[,lhs] %= rhs[,rhs]` |    `lhs = lhs % rhs`    |
 |   `&=`   | `lhs[,lhs] &= rhs[,rhs]` |    `lhs = lhs & rhs`    |
 |   `^=`   | `lhs[,lhs] ^= rhs[,rhs]` |    `lhs = lhs ^ rhs`    |
-|   `|=`   | `lhs[,lhs] |= rhs[,rhs]` |    `lhs = lhs | rhs`    |
+|   `\|=`   | `lhs[,lhs] \|= rhs[,rhs]` |    `lhs = lhs \| rhs`    |
 
 **Operator Precedences**
 
@@ -187,9 +185,9 @@ print(result)		# 1
 |     7      |     `==` `!=`     |
 |     6      |        `&`        |
 |     5      |        `^`        |
-|     4      |        `|`        |
+|     4      |        `\|`        |
 |     3      |       `&&`        |
-|     2      |       `||`        |
+|     2      |       `\|\|`        |
 |     1      |       `?:`        |
 
 ### Statements
@@ -298,7 +296,7 @@ switch(a){
 
 **Goto Statement**
 
-Like many languages, gscript can use keyword "goto":
+Like many languages, gscript can use keyword `goto`:
 
 ```python
 	let i,sum = 0,0
@@ -310,7 +308,7 @@ label:
     print(sum)		# 5050
 ```
 
-*note: use "goto" to jump inside the scope of a label from outside is now allowed*. Following code will compile failed:
+*note: use "goto" to jump inside the scope of a label from outside is not allowed*. Following code will compile failed:
 
 ```python
 # illegal
@@ -320,7 +318,7 @@ goto label			# goto statement is in a larger scope
 }
 ```
 
-*note: use "goto" to jump outside of try block is now allowed too*. 
+*note: use "goto" to jump outside of try block is not allowed too*. 
 
 ```python
 # illegal
@@ -340,7 +338,7 @@ We can use keyword `enum` to enumerate some constants, very similar to `C`:
 ```python
 enum {
     KW_GOTO,		# 0
-    KW_LET			# 1
+    KW_LET		# 1
     KW_FOR=5,		# 5
     KW_WHILE,		# 6
 }
@@ -368,7 +366,7 @@ let foo = func() {
 
 what's the differences?
 
-In first way, function `foo` has a global scope, it can be used anywhere. However, `foo` in second way is only used as a local variable. 
+In first way, function `foo` has global scope, it can be used anywhere. However, `foo` in second way can only be used as a local variable. 
 
 ```python
 # compile pass
@@ -404,15 +402,15 @@ func foo(a,b){
 }
 
 let a,b = foo(9,2) 		# a=4,b=1
-let c = foo(9,2)		# c=4				will discard extra return values
-let d,e,f = foo(9,2)	# d=4,e=1,f=nil		the missing part will be filled with nil
+let c = foo(9,2)		# c=4			will discard extra return values
+let d,e,f = foo(9,2)		# d=4,e=1,f=nil		the missing part will be filled with nil
 ```
 
 Pay attention to some special cases:
 
 ```python
-let a,b,c = 1,foo(9,2)	# a=1,b=4,c=1
-let a,b,c = foo(9,2),9	# a=4,b=9,c=nil
+let a,b,c = 1,foo(9,2)		# a=1,b=4,c=1
+let a,b,c = foo(9,2),9		# a=4,b=9,c=nil
 print(foo(9,2))			# output: 4
 ```
 
@@ -450,7 +448,7 @@ func foo(name="jack",age=10) {
 
 foo()			# output: jack 10
 foo("rose")		# output: rose 10
-foo("rose",20)	# output: rose 20
+foo("rose",20)		# output: rose 20
 ```
 
 **varargs**
@@ -464,7 +462,7 @@ func foo(a,...args) {
 
 foo(1,2,3)			# output: 1 2 [2,3]
 foo(1)				# output: 1 0 []
-foo(1,2,3,4)		# output: 1 3 [2,3,4]
+foo(1,2,3,4)			# output: 1 3 [2,3,4]
 foo()				# output: nil,0,[]
 ```
 
@@ -499,17 +497,17 @@ class People{
 }
 ```
 
-+ `__self` is the constructor of a class
++ `__self` is the constructor of class
 + use `this` to access object.
 
 how to create an object?
 
 ```python
-let p = new People("Jack",18);		# use keyword new
-p.show();							# call method
+let p = new People("Jack",18);			# use keyword new
+p.show();					# call method
 p.change_name("Rose");				# call method
-p.age = 20;							# access member
-p.show();							# call method
+p.age = 20;					# access member
+p.show();					# call method
 ```
 
 ### Exception Handle
@@ -563,12 +561,18 @@ Consume our work directory is like this:
 ```python
 import "module"		# import local module "module.gs"
 import "lib/xxx"	# import local module "lib/xxx.gs"
-import fs			# import standard library "fs"
+import fs		# import standard library "fs"
 
 module.foo();
 ```
 
 Whether the imported module is quoted to indicate whether it is a standard library or a local module.
+
+we can alias imported package use keyword `as`:
+
+```python
+import "module" as mod
+```
 
 Use keyword `export` to return a value, `module.gs`:
 
@@ -577,7 +581,7 @@ func foo(){
     print("foo")
 }
 
-# export Expression
+# syntax: export Expression
 # here we export an object with one member foo
 export {
     foo: foo,
