@@ -32,6 +32,12 @@ func (obj *Object) Set(k, v interface{}) {
 		obj.Map[k] = v
 		return
 	}
+	for i := range obj.Array {
+		if obj.Array[i].Key == k {
+			obj.Array[i].Val = v
+			return
+		}
+	}
 	if len(obj.Array) < MaxArrayCap {
 		obj.Array = append(obj.Array, KV{k, v})
 		return
