@@ -2,7 +2,7 @@
 
 ### Type
 
-Following are most used types in gscript:
+Following are most frequently used types in gscript:
 
 ```python
 100						# Number
