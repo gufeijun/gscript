@@ -1,4 +1,4 @@
-	## The Gscript Language
+## The Gscript Language
 
 中文|[English](https://github.com/gufeijun/gscript/blob/master/README.md)
 
