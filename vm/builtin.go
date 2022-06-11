@@ -786,7 +786,7 @@ func builtinSub(argCnt int, vm *VM) (retCnt int) {
 }
 
 func builtinAppend(argCnt int, vm *VM) (retCnt int) {
-	vm.assert(argCnt < 2)
+	vm.assert(argCnt >= 2)
 	target := vm.curProto.stack.top(argCnt)
 	arr, ok := target.(*types.Array)
 	vm.assert(ok)
