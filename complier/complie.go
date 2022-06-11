@@ -17,6 +17,9 @@ const maxLimitFileSize = 10 << 20 // 10MB
 func readCode(path string) ([]byte, error) {
 	info, err := os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("%s: imported file is not exists", path)
+		}
 		return nil, err
 	}
 	if info.Size() > maxLimitFileSize {

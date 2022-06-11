@@ -14,7 +14,7 @@ import (
 const (
 	magicNumber       = 0x00686a6c
 	VersionMajor byte = 0
-	VersionMinor byte = 1
+	VersionMinor byte = 2
 )
 
 const (
