@@ -216,11 +216,11 @@ func builtinRename(argCnt int, vm *VM) (retCnt int) {
 
 func newStat(info fs.FileInfo) *types.Object {
 	obj := types.NewObject()
-	obj.Data["is_dir"] = info.IsDir()
-	obj.Data["mode"] = int64(info.Mode())
-	obj.Data["name"] = info.Name()
-	obj.Data["size"] = info.Size()
-	obj.Data["mod_time"] = info.ModTime().Unix()
+	obj.Set("is_dir", info.IsDir())
+	obj.Set("mode", int64(info.Mode()))
+	obj.Set("name", info.Name())
+	obj.Set("size", info.Size())
+	obj.Set("mod_time", info.ModTime().Unix())
 	return obj
 }
 
@@ -706,11 +706,8 @@ func builtinClone(argCnt int, vm *VM) (retCnt int) {
 		copy(arr, src.Data)
 		push(vm, types.NewArray(arr))
 	case *types.Object:
-		obj := types.NewObjectN(len(src.Data))
-		for k, v := range src.Data {
-			obj.Data[k] = v
-		}
-		push(vm, obj)
+		obj := types.NewObjectN(src.KVCount())
+		push(vm, obj.Clone())
 	case *types.Buffer:
 		data := make([]byte, len(src.Data))
 		copy(data, src.Data)
@@ -726,7 +723,7 @@ func builtinDelete(argCnt int, vm *VM) (retCnt int) {
 	vm.assert(argCnt == 2)
 	key := pop(vm)
 	obj := pop(vm).(*types.Object)
-	delete(obj.Data, key)
+	obj.Delete(key)
 	return 0
 }
 
@@ -821,7 +818,7 @@ func builtinLen(argCnt int, vm *VM) (retCnt int) {
 	case *types.Array:
 		length = int64(len(val.Data))
 	case *types.Object:
-		length = int64(len(val.Data))
+		length = int64(val.KVCount())
 	case string:
 		length = int64(len(val))
 	case *types.Buffer:
@@ -844,15 +841,16 @@ func fprint(w io.Writer, val interface{}) {
 	case *types.Object:
 		fmt.Fprintf(w, "Object{")
 		i := 0
-		for k, v := range val.Data {
+		cnt := val.KVCount()
+		val.ForEach(func(k, v interface{}) {
 			fprint(w, k)
 			fmt.Fprintf(w, ": ")
 			fprint(w, v)
-			if i != len(val.Data)-1 {
+			if i != cnt-1 {
 				fmt.Fprintf(w, ", ")
 				i++
 			}
-		}
+		})
 		fmt.Fprintf(w, "}")
 	case *types.Array:
 		fmt.Fprintf(w, "Array[")

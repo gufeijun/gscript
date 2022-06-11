@@ -218,7 +218,7 @@ func actionBinaryATTR(vm *VM) {
 		if key == nil {
 			vm.exit("map key should not be nil")
 		}
-		vm.curProto.stack.Replace(obj.Data[key])
+		vm.curProto.stack.Replace(obj.Get(key))
 		return
 	}
 	vm.exit("do not support attr access for %T", obj)
@@ -335,7 +335,7 @@ func actionStoreKV(vm *VM) {
 	vm.curProto.stack.Pop()
 	key := vm.curProto.stack.Top()
 	vm.curProto.stack.Pop()
-	obj.Data[key] = val
+	obj.Set(key, val)
 }
 
 func actionPushNameNil(vm *VM) {
@@ -385,7 +385,7 @@ func actionNewMap(vm *VM) {
 		if key == nil {
 			vm.exit("map key should not be nil")
 		}
-		obj.Data[key] = val
+		obj.Set(key, val)
 	}
 	vm.curProto.stack.Push(obj)
 }
@@ -454,7 +454,7 @@ func attrAssign(vm *VM, cb func(ori, val interface{}) interface{}) {
 		if key == nil {
 			vm.exit("map key should not be nil")
 		}
-		obj.Data[key] = cb(obj.Data[key], val)
+		obj.Set(key, cb(obj.Get(key), val))
 		return
 	}
 	vm.exit("do not support attr assign for %T", obj)
@@ -491,7 +491,7 @@ func actionAttrAccess(vm *VM) {
 		if key == nil {
 			vm.exit("map key should not be nil")
 		}
-		vm.curProto.stack.Replace(obj.Data[key])
+		vm.curProto.stack.Replace(obj.Get(key))
 		return
 	}
 	vm.exit("do not support attr access for %T", obj)

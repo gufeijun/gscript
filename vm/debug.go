@@ -199,33 +199,7 @@ func (vm *VM) Debug() {
 }
 
 func showValue(val interface{}) {
-	switch val := val.(type) {
-	case string:
-		fmt.Printf("\"%s\"", val)
-	case *types.Closure:
-		fmt.Printf("closure{")
-		fmt.Printf("upvalues: [")
-		for i, upValue := range val.UpValues {
-			fmt.Printf("%v", *upValue)
-			if i != len(val.UpValues)-1 {
-				fmt.Printf(", ")
-			}
-		}
-		fmt.Printf("]}")
-	case *builtinFunc:
-		fmt.Printf("builtin(\"%s\")", val.name)
-	case *types.Array:
-		fmt.Printf("%v", val.Data)
-	case *types.Object:
-		fmt.Printf("%v", val.Data)
-	case *types.Buffer:
-		fmt.Printf("Buffer")
-	case *types.File:
-		fmt.Printf("File")
-	default:
-		fmt.Printf("%v", val)
-	}
-
+	fprint(os.Stdout, val)
 }
 
 func showInstruction(vm *VM, text []byte, pc uint32) uint32 {
