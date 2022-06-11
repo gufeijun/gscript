@@ -108,9 +108,10 @@ func writeAsm(w *bytes.Buffer, text []byte, protos []proto.Proto) error {
 		if pc >= len(text) {
 			break
 		}
+		fmt.Fprintf(w, "\t\t")
+		fmt.Fprintf(w, "%d\t\t", pc)
 		instruction := text[pc]
 		pc++
-		fmt.Fprintf(w, "\t\t")
 		if int(instruction) < len(zereOpNumAsms) {
 			fmt.Fprintf(w, "%s\n", zereOpNumAsms[instruction])
 			continue
