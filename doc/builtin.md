@@ -13,9 +13,9 @@ print(1,"2",[1,2,3],{foo:"bar"})	# 1 2 Array[1, 2, 3] Object{foo: bar}
 ### len
 
 ```python
-let l = len([1,2,3])		# l = 3
-l = len({foo:"bar"})		# l = 1
-l = len("hello")			# l = 5
+let l = len([1,2,3])      # l = 3
+l = len({foo:"bar"})      # l = 1
+l = len("hello")          # l = 5
 ```
 
 + parameter
@@ -43,12 +43,12 @@ sub(src, start[,end])
 
 ```python
 let str = "1234"
-let s1 = sub(str,1)		# s1 = "234"
-let s2 = sub(str,1,2)	# s2 = "2"
+let s1 = sub(str,1)         # s1 = "234"
+let s2 = sub(str,1,2)       # s2 = "2"
 
 let arr = [1,2,3,4]
-ler a1 = sub(arr,1)		# a1 = [2,3,4]
-let a2 = sub(arr,1,2)	# a2 = [2]
+ler a1 = sub(arr,1)         # a1 = [2,3,4]
+let a2 = sub(arr,1,2)       # a2 = [2]
 ```
 
 + description: get sub array or sub string. 
@@ -63,13 +63,13 @@ let a2 = sub(arr,1,2)	# a2 = [2]
 ### type
 
 ```python
-print(type(""))			# String
-print(type(func(){}))	# closure
-print(type(type))		# Builtin
-print(type({}))			# Object
-print(type([]))			# Array
-print(type(false))		# Boolean
-print(type(nil))		# Nil
+print(type(""))         # String
+print(type(func(){}))   # closure
+print(type(type))       # Builtin
+print(type({}))         # Object
+print(type([]))         # Array
+print(type(false))      # Boolean
+print(type(nil))        # Nil
 ```
 
 ### delete
