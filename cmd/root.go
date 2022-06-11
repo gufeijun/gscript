@@ -40,13 +40,12 @@ var runCmd = &cobra.Command{
 	Args:                  cobra.ExactArgs(1),
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		vm, err := initVM(args[0])
 		if err != nil {
-			return err
+			exit(err)
 		}
 		vm.Run()
-		return nil
 	},
 }
 
@@ -55,13 +54,12 @@ var debugCmd = &cobra.Command{
 	Short:                 "Debug script file. Usage: gsc debug <file>",
 	Args:                  cobra.ExactArgs(1),
 	DisableFlagsInUseLine: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		vm, err := initVM(args[0])
 		if err != nil {
-			return err
+			exit(err)
 		}
 		vm.Debug()
-		return nil
 	},
 }
 
@@ -70,21 +68,18 @@ var buildCmd = &cobra.Command{
 	Short:                 "complie srcipt file. Usage: gsc build [flags] <file>",
 	Args:                  cobra.ExactArgs(1),
 	DisableFlagsInUseLine: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		src := args[0]
 		// just complie source file to bytes code
 		if !Flag_Asm {
-			return complieToBytesCode(src)
+			exit(complieToBytesCode(src))
 		}
 		// generate human-readable assemble code
-		return complieToReadableAsm(src)
+		exit(complieToReadableAsm(src))
 	},
 }
 
 func complieToReadableAsm(src string) (err error) {
-	if Flag_Output == "" {
-		Flag_Output = replaceExtension(src, ".gsasm")
-	}
 	var protos []proto.Proto
 	if proto.IsProtoFile(src) {
 		_, protos, err = proto.ReadProtosFromFile(src)
@@ -93,6 +88,9 @@ func complieToReadableAsm(src string) (err error) {
 	}
 	if err != nil {
 		return err
+	}
+	if Flag_Output == "" {
+		Flag_Output = replaceExtension(src, ".gsasm")
 	}
 	return WriteHumanReadableAsmToFile(Flag_Output, protos)
 }
@@ -143,4 +141,12 @@ func Execute() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func exit(err error) {
+	if err == nil {
+		return
+	}
+	fmt.Printf("Failed: %s\n", err.Error())
+	os.Exit(0)
 }
