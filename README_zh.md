@@ -161,7 +161,7 @@ func fib(x) {
 ### 参考
 
 + [语法](https://github.com/gufeijun/gscript/blob/master/doc/syntax_zh.md)
-+ [内置函数](https://github.com/gufeijun/gscript/blob/master/doc/builtin_zh.md)
-+ [标准库](https://github.com/gufeijun/gscript/blob/master/doc/std_zh.md)
++ [内置函数](https://github.com/gufeijun/gscript/blob/master/doc/builtin.md)
++ [标准库](https://github.com/gufeijun/gscript/blob/master/doc/std.md)
 + [文法](https://github.com/gufeijun/gscript/blob/master/doc/bnf.txt)
 
