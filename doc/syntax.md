@@ -252,12 +252,12 @@ for(let i=0 ;; i++){
     if (i == 50) break;
     sum += i
 }
-print(sum)
+print(sum)			# 1+3+5+...+49
 ```
 
 **Switch statement**
 
-switch statement is very similar to Go, it will automatically insert a  break at last of every case:
+switch statement is very similar to Go, it will automatically insert a  break at end of every case:
 
 ```python
 switch(a) {
