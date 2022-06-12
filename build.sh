@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 version=$(go version | awk '{print $3}' | awk '{split($0,b,".");print b[2]}')
 if [ $version -lt 16 ]; then
@@ -8,10 +8,10 @@ fi
 
 cd $(dirname $0)
 
-function prepare() {
+prepare() {
     files=$(ls std/*.gsproto 2> /dev/null | wc -l)
-    if [ "$files" == "0" ] ;then
-    touch std/.gsproto  # make go complier happy for embedding at least one static file
+    if [ "$files" = "0" ]; then
+        touch std/.gsproto  # make go complier happy for embedding at least one static file
     fi
     
     if [ ! -d "bin" ]; then
@@ -19,7 +19,7 @@ function prepare() {
     fi
 }
 
-function build_util {
+build_util() {
     prepare
     go build -o bin/util util/main.go
     bin/util std
@@ -32,19 +32,19 @@ if [ $# -eq 0 ]; then
 fi
 
 # $1=arch $2=os
-function build() {
+build() {
     go env -w GOARCH=$1
     go env -w GOOS=$2
     util_bin=util
     gsc_bin=gsc
-    if [ $2 == "windows" ]; then
+    if [ $2 = "windows" ]; then
         util_bin=${util_bin}.exe
         gsc_bin=${gsc_bin}.exe
     fi
 
     go build -o bin/${gsc_bin} main.go
     cd bin
-    if [ $2 == "windows" ]; then
+    if [ $2 = "windows" ]; then
         zip gsc_$2_$1.zip ${gsc_bin}
     else
         tar cvf gsc_$2_$1.tar.gz ${gsc_bin}
@@ -53,7 +53,7 @@ function build() {
 
 }
 
-if [ $1 == "all" ]; then
+if [ $1 = "all" ]; then
     build_util
     old_os=$(go env GOOS)
     old_arch=$(go env GOARCH)
@@ -68,7 +68,7 @@ if [ $1 == "all" ]; then
 
     go env -w GOOS=$old_os
     go env -w GOARCH=$old_arch
-elif [ $1 == "clean" ]; then
+elif [ $1 = "clean" ]; then
     rm bin std/*.gsproto std/.gsproto -rf
 else
     echo "unkown command:" $1
