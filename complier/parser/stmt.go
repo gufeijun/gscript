@@ -498,6 +498,8 @@ func (p *Parser) parseParameters() (pars []ast.Parameter, defaultValue bool) {
 				par.Default = t.Value
 			case token.TOKEN_OP_SUB:
 				par.Default = -p.NextTokenKind(token.TOKEN_NUMBER).Value.(int64)
+			case token.TOKEN_KW_NIL:
+				par.Default = nil
 			default:
 				p.exit("invalid default value '%s' for parameter '%s'", t.Content, par.Name)
 			}
