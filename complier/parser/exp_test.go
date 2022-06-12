@@ -443,11 +443,11 @@ func TestNewObjectExp(t *testing.T) {
 		`new student(name,age)`,
 	}
 	var wants = []*NewObjectExp{
-		{"people", nil},
-		{"people", nil},
-		{"people", []Exp{&StringLiteralExp{"jack"}, &NumberLiteralExp{int64(12)}}},
-		{"student", []Exp{&NameExp{1, "name"}}},
-		{"student", []Exp{&NameExp{1, "name"}, &NameExp{1, "age"}}},
+		{1, "people", nil},
+		{1, "people", nil},
+		{1, "people", []Exp{&StringLiteralExp{"jack"}, &NumberLiteralExp{int64(12)}}},
+		{1, "student", []Exp{&NameExp{1, "name"}}},
+		{1, "student", []Exp{&NameExp{1, "name"}, &NameExp{1, "age"}}},
 	}
 	for i, src := range srcs {
 		l := newLexer(src)

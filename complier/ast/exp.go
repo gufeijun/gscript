@@ -30,6 +30,7 @@ type TrueExp struct{}
 type NilExp struct{}
 
 type NewObjectExp struct {
+	Line int
 	Name string
 	Args []Exp
 }

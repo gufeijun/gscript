@@ -67,7 +67,7 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 		genFuncCallExp(exp, ctx, retCnt)
 		retCnt = 0
 	default:
-		fmt.Printf("[%s] unkown expression %v\n", curParsingFile, exp)
+		fmt.Printf("[%s] unknown expression %v\n", curParsingFile, exp)
 		os.Exit(0)
 	}
 	for i := 0; i < retCnt; i++ {
@@ -78,7 +78,12 @@ func genExp(exp ast.Exp, ctx *Context, retCnt int) {
 func genNewObjectExp(exp *ast.NewObjectExp, ctx *Context) {
 	ctx.writeIns(proto.INS_NEW_EMPTY_MAP)
 	genExps(exp.Args, ctx, len(exp.Args))
-	ctx.insLoadAnonymous(ctx.classes[exp.Name])
+	idx, ok := ctx.classes[exp.Name]
+	if !ok {
+		fmt.Printf("[%s:%d] undefined class '%s'\n", curParsingFile, exp.Line, exp.Name)
+		os.Exit(0)
+	}
+	ctx.insLoadAnonymous(idx)
 	ctx.insCall(0, byte(len(exp.Args)))
 }
 

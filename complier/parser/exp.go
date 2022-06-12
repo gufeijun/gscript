@@ -251,6 +251,7 @@ func parseNewObjectExp(p *Parser) *ast.NewObjectExp {
 	p.l.NextToken()
 	exp := &ast.NewObjectExp{}
 	exp.Name = p.NextTokenKind(token.TOKEN_IDENTIFIER).Content
+	exp.Line = p.l.Line()
 	if !p.Expect(token.TOKEN_SEP_LPAREN) {
 		return exp
 	}
