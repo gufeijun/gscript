@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"math"
 	"os"
+	"os/exec"
 )
 
 type builtinFunc struct {
@@ -59,6 +60,84 @@ var builtinFuncs = []builtinFunc{
 	{builtinReadDir, "__readdir"},
 	{builtinFReadDir, "__freaddir"},
 	{builtinThrow, "throw"},
+	{builtinArgs, "__args"},
+	{builtinGetegid, "__getegid"},
+	{builtinGeteuid, "__geteuid"},
+	{builtinGetgid, "__getgid"},
+	{builtinGetpid, "__getpid"},
+	{builtinGetppid, "__getppid"},
+	{builtinGetuid, "__getuid"},
+	{builtinExec, "__exec"},
+}
+
+func builtinExec(argCnt int, vm *VM) int {
+	vm.assert(argCnt == 2)
+	arr, ok := pop(vm).(*types.Array)
+	vm.assert(ok)
+	command, ok := pop(vm).(string)
+	vm.assert(ok)
+
+	args := make([]string, len(arr.Data))
+	for i := range arr.Data {
+		str, ok := arr.Data[i].(string)
+		vm.assert(ok)
+		args[i] = str
+	}
+	output, err := exec.Command(command, args...).Output()
+	if err != nil {
+		throw(err, vm)
+		return 0
+	}
+	push(vm, string(output))
+	return 1
+}
+
+func builtinGetuid(argCnt int, vm *VM) int {
+	vm.assert(argCnt == 0)
+	push(vm, int64(os.Getuid()))
+	return 1
+}
+
+func builtinGetppid(argCnt int, vm *VM) int {
+	vm.assert(argCnt == 0)
+	push(vm, int64(os.Getppid()))
+	return 1
+}
+
+func builtinGetpid(argCnt int, vm *VM) int {
+	vm.assert(argCnt == 0)
+	push(vm, int64(os.Getpid()))
+	return 1
+}
+
+func builtinGetgid(argCnt int, vm *VM) int {
+	vm.assert(argCnt == 0)
+	push(vm, int64(os.Getgid()))
+	return 1
+}
+
+func builtinGeteuid(argCnt int, vm *VM) int {
+	vm.assert(argCnt == 0)
+	push(vm, int64(os.Geteuid()))
+	return 1
+}
+
+func builtinGetegid(argCnt int, vm *VM) int {
+	vm.assert(argCnt == 0)
+	push(vm, int64(os.Getegid()))
+	return 1
+}
+
+func builtinArgs(argCnt int, vm *VM) int {
+	vm.assert(argCnt == 0)
+
+	// ignore "gsc" and "run"
+	args := make([]interface{}, 0, len(os.Args)-2)
+	for i := 2; i < len(os.Args); i++ {
+		args = append(args, os.Args[i])
+	}
+	push(vm, types.NewArray(args))
+	return 1
 }
 
 func builtinMkdir(argCnt int, vm *VM) (retCnt int) {
@@ -422,7 +501,7 @@ func builtinRead(argCnt int, vm *VM) (retCnt int) {
 	file, ok := pop(vm).(*types.File)
 	vm.assert(ok)
 	n, err := file.File.Read(buff.Data[:size])
-	if err != nil {
+	if err != nil && err != io.EOF {
 		throw(err, vm)
 		return 0
 	}

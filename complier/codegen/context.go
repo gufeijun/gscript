@@ -375,4 +375,12 @@ var builtinFuncs = map[string]uint32{
 	"__readdir":            34,
 	"__freaddir":           35,
 	"throw":                36,
+	"__args":               37,
+	"__getegid":            38,
+	"__geteuid":            39,
+	"__getgid":             40,
+	"__getpid":             41,
+	"__getppid":            42,
+	"__getuid":             43,
+	"__exec":               44,
 }
