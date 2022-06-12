@@ -3,10 +3,14 @@ import Buffer;
 class File{
     __self(file) {
         this._file = file;
+        this._eof = false;
     }
     read(buf,size) {
+        if (this._eof) return 0;
         if(size == nil) size = buf.cap();
-        return __read(this._file, buf._buffer, size);
+        let n = __read(this._file, buf._buffer, size);
+        this._eof = n == 0;
+        return n;
     }
     # data is a Buffer or String
     write(data, size=-1) {
@@ -21,7 +25,9 @@ class File{
     }
     # whence = cur, end or start
     seek(offset, whence="cur") {
-        return __seek(this._file, offset, whence);
+        let n = __seek(this._file, offset, whence);
+        this._eof = false;
+        return n;
     }
     chmod(mode) {
         __fchmod(this._file, mode);
@@ -44,6 +50,10 @@ class File{
     }
     readDir(n) {
         return __freaddir(this._file, n);
+    }
+    # return bool
+    eof() {
+        return this._eof;
     }
 }
 
