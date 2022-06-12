@@ -35,10 +35,12 @@ var versionCmd = &cobra.Command{
 }
 
 var runCmd = &cobra.Command{
-	Use:                   "run <file>",
-	Short:                 "Excute script file. Usage: gsc run <file>",
-	Args:                  cobra.ExactArgs(1),
-	DisableFlagParsing:    true,
+	Use:   "run <file>",
+	Short: "Excute script file. Usage: gsc run <file>",
+	Args:  cobra.MinimumNArgs(1),
+	FParseErrWhitelist: cobra.FParseErrWhitelist{
+		UnknownFlags: true,
+	},
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		vm, err := initVM(args[0])
@@ -50,9 +52,12 @@ var runCmd = &cobra.Command{
 }
 
 var debugCmd = &cobra.Command{
-	Use:                   "debug <file>",
-	Short:                 "Debug script file. Usage: gsc debug <file>",
-	Args:                  cobra.ExactArgs(1),
+	Use:   "debug <file>",
+	Short: "Debug script file. Usage: gsc debug <file>",
+	Args:  cobra.MinimumNArgs(1),
+	FParseErrWhitelist: cobra.FParseErrWhitelist{
+		UnknownFlags: true,
+	},
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		vm, err := initVM(args[0])
