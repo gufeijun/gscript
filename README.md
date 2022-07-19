@@ -73,7 +73,7 @@ catch(e){
 
 ### Install
 
-Since Complier and VM are written in pure Go(no cgo) and does not use any platform-dependent interfaces, so Gscript in a cross-platform language.
+Since Complier and VM are written in pure Go(no cgo) and does not use any platform-dependent interfaces, so Gscript is a cross-platform language.
 
 You can install Gscript within two ways:
 
