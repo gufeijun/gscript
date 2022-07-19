@@ -103,7 +103,7 @@ open file `main.gs` and write codes below:
 print("hello world");
 ```
 
-run out srcipt:
+run the srcipt:
 
 ```shell
 gsc run main.gs
