@@ -73,7 +73,7 @@ catch(e){
 
 ### Install
 
-Since Complier and VM are written in pure Go(no cgo) and does not use any platform-dependent interfaces, so Gscript is a cross-platform language.
+Since compiler and VM are written in pure Go(no cgo) and does not use any platform-dependent interfaces, so Gscript is a cross-platform language.
 
 You can install Gscript in two ways:
 
@@ -87,11 +87,11 @@ You can install Gscript in two ways:
   sh build.sh
   ```
 
-  then the complier will generated to `bin/gsc`. 
+  then the compiler will generated to `bin/gsc`. 
 
 + Download from [releases](https://github.com/gufeijun/gscript/releases). 
 
-`gsc ` means `gscript complier`. You can add the executable to `PATH` as you wish. 
+`gsc ` means `gscript compiler`. You can add the executable to `PATH` as you wish. 
 
 Then all you need is just having fun.
 

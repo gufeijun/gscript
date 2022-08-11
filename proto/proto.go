@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"gscript/complier/ast"
+	"gscript/compiler/ast"
 	"io"
 	"math"
 	"os"

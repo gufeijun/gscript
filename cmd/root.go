@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"gscript/complier"
+	"gscript/compiler"
 	"gscript/proto"
 	"gscript/std"
 	"gscript/vm"
@@ -89,7 +89,7 @@ func complieToReadableAsm(src string) (err error) {
 	if proto.IsProtoFile(src) {
 		_, protos, err = proto.ReadProtosFromFile(src)
 	} else {
-		protos, err = complier.ComplieWithSrcFile(src)
+		protos, err = compiler.ComplieWithSrcFile(src)
 	}
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func complieToBytesCode(src string) error {
 	if Flag_Output == "" {
 		Flag_Output = replaceExtension(src, std.ProtoSuffix)
 	}
-	protos, err := complier.ComplieWithSrcFile(src)
+	protos, err := compiler.ComplieWithSrcFile(src)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func initVM(src string) (*vm.VM, error) {
 	if proto.IsProtoFile(src) {
 		_, protos, err = proto.ReadProtosFromFile(src)
 	} else {
-		protos, err = complier.ComplieWithSrcFile(src)
+		protos, err = compiler.ComplieWithSrcFile(src)
 	}
 	if err != nil {
 		return nil, err

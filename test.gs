@@ -1,4 +1,5 @@
 import fs;
+import os;
 
 let filepath = "./text.txt"
 
@@ -25,5 +26,5 @@ try{
 }
 catch(e){
     print("operation failed, error msg:",e)
-    __exit(0)
+    os.exit(0)
 }

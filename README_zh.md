@@ -93,7 +93,7 @@ catch(e){
 
 + 从[releases](https://github.com/gufeijun/gscript/releases)下载。
 
-`gsc ` 意思是 `gscript complier`。你可以自主选择是否将这个二进制文件添加到`PATH`中。
+`gsc ` 意思是 `gscript compiler`。你可以自主选择是否将这个二进制文件添加到`PATH`中。
 
 ### 快速开始
 

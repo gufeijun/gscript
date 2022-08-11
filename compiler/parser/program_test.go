@@ -1,7 +1,7 @@
 package parser
 
 import (
-	. "gscript/complier/ast"
+	. "gscript/compiler/ast"
 	"reflect"
 	"testing"
 )

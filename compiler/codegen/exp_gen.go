@@ -3,7 +3,7 @@ package codegen
 import (
 	"encoding/binary"
 	"fmt"
-	"gscript/complier/ast"
+	"gscript/compiler/ast"
 	"gscript/proto"
 	"os"
 )

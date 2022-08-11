@@ -2,7 +2,7 @@ package lexer
 
 import (
 	"fmt"
-	. "gscript/complier/token"
+	. "gscript/compiler/token"
 	"math/rand"
 	"strings"
 	"testing"

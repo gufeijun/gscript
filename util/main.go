@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"gscript/complier/codegen"
-	"gscript/complier/lexer"
-	"gscript/complier/parser"
+	"gscript/compiler/codegen"
+	"gscript/compiler/lexer"
+	"gscript/compiler/parser"
 	"gscript/proto"
 	"gscript/std"
 	"io/ioutil"

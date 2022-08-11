@@ -1,6 +1,6 @@
 package proto
 
-import "gscript/complier/ast"
+import "gscript/compiler/ast"
 
 type BasicInfo struct {
 	VaArgs     bool

@@ -1,7 +1,7 @@
 package codegen
 
 import (
-	"gscript/complier/ast"
+	"gscript/compiler/ast"
 	"gscript/proto"
 )
 

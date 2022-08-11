@@ -1,4 +1,4 @@
-package complier
+package compiler
 
 import (
 	"fmt"

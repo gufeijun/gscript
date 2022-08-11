@@ -1,8 +1,8 @@
 package parser
 
 import (
-	. "gscript/complier/ast"
-	"gscript/complier/lexer"
+	. "gscript/compiler/ast"
+	"gscript/compiler/lexer"
 	"reflect"
 	"testing"
 )

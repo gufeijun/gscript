@@ -2,8 +2,8 @@ package codegen
 
 import (
 	"fmt"
-	"gscript/complier/ast"
-	"gscript/complier/parser"
+	"gscript/compiler/ast"
+	"gscript/compiler/parser"
 	"gscript/proto"
 	"os"
 )

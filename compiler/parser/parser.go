@@ -2,9 +2,9 @@ package parser
 
 import (
 	"fmt"
-	"gscript/complier/ast"
-	"gscript/complier/lexer"
-	"gscript/complier/token"
+	"gscript/compiler/ast"
+	"gscript/compiler/lexer"
+	"gscript/compiler/token"
 	"os"
 )
 

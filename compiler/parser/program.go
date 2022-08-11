@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"gscript/complier/ast"
-	"gscript/complier/token"
+	"gscript/compiler/ast"
+	"gscript/compiler/token"
 )
 
 func (p *Parser) parseProgram() *ast.Program {

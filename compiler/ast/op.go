@@ -1,6 +1,6 @@
 package ast
 
-import "gscript/complier/token"
+import "gscript/compiler/token"
 
 // do not change the order of following const
 const (

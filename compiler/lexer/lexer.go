@@ -2,7 +2,7 @@ package lexer
 
 import (
 	"fmt"
-	"gscript/complier/token"
+	"gscript/compiler/token"
 	"os"
 	"strconv"
 	"strings"
