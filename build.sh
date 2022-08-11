@@ -8,6 +8,8 @@ fi
 
 cd $(dirname $0)
 
+touch std/.gsproto
+
 prepare() {
     files=$(ls std/*.gsproto 2> /dev/null | wc -l)
     if [ "$files" = "0" ]; then
@@ -69,7 +71,7 @@ if [ $1 = "all" ]; then
     go env -w GOOS=$old_os
     go env -w GOARCH=$old_arch
 elif [ $1 = "clean" ]; then
-    rm bin std/*.gsproto std/.gsproto -rf
+    rm -rf bin std/*.gsproto std/.gsproto
 else
     echo "unkown command:" $1
     exit
