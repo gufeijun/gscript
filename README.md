@@ -46,7 +46,7 @@ catch(e){
 }
 ```
 
-### Fetures
+### Features
 
 + function
 
