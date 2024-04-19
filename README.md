@@ -48,14 +48,14 @@ catch(e){
 
 ### Features
 
-+ function
++ Function
 
   + Multiple return values
 
   + Closure
   + Recursive function call
 
-+ All standard libraries are packaged into one executable, which means, to install or use gscipt it's no need to configure some  environment variables.
++ All standard libraries are packaged into one executable, which means, to install or use gscript it's no need to configure some  environment variables.
 
 + Object-oriented programming
 
@@ -77,7 +77,7 @@ Since compiler and VM are written in pure Go(no cgo) and does not use any platfo
 
 You can install Gscript in two ways:
 
-+ Complie from source code. 
++ Compile from source code. 
 
   *note: we use the new feature "embed" of Go 1.16, so make sure your Go version is greater than or equal to 1.16*.
 
@@ -103,7 +103,7 @@ open file `main.gs` and write codes below:
 print("hello world");
 ```
 
-run the srcipt:
+run the script:
 
 ```shell
 gsc run main.gs
@@ -139,7 +139,7 @@ we demonstrated the command `run` of `gsc` above. You can use `gsc --help` for m
 
 + use `gsc build -a <source file>` or `gsc build -a <bytecode file>` to generate human-readable assemble-like codes.  
 
-  Take the `main.gs` in section `Quic Start` as an example, run the following command:
+  Take the `main.gs` in section `Quick Start` as an example, run the following command:
 
   ```shell
   gsc build -a main.gs -o output.gscasm
